@@ -1,18 +1,16 @@
 {
-  lib,
-  fetchFromGitHub,
   rustPlatform,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage {
   pname = "compiler-course";
   version = "0.1.0";
 
-  src = fetchFromGitHub {
-    owner = "VSinerva";
-    repo = pname;
+  # You would not use this in an actual nix package!
+  src = builtins.fetchGit {
+    url = "https://gitea.vsinerva.fi/VSinerva/compiler-course.git";
+    name = "compiler-course-src";
     ref = "main";
-    hash = lib.fakeHash; # Use this to get the new hash
   };
 
   cargoLock = {
