@@ -1,3 +1,4 @@
+use crate::compiler;
 use json;
 use std::{
     io::prelude::*,
@@ -34,7 +35,8 @@ fn handle_connection(mut stream: TcpStream) {
     match json_request["command"].as_str().unwrap() {
         "ping" => println!("ping"),
         "compile" => {
-            let program = &json_request["code"].as_str().unwrap();
+            let program = json_request["code"].as_str().unwrap();
+            compiler::compile(program);
             println!("compile code:\n\n{program}\n");
         }
         _ => panic!("Unexpected command!"),
