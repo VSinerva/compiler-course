@@ -31,10 +31,12 @@ pub fn tokenize(code: &str) -> Vec<Token> {
 
             if let Some(token) = found_match {
                 if !token_type.ignore() {
+                    let start = pos + token.start();
+                    let end = pos + token.end();
                     tokens.push(Token::new(
-                        &code[pos + token.start()..pos + token.end()],
+                        &code[start..end],
                         *token_type,
-                        CodeLocation::new(0, 0),
+                        CodeLocation::new(start, end),
                     ));
                 }
 
@@ -57,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_tokenize_basic() {
-        let loc = CodeLocation::new(-1, -1);
+        let loc = CodeLocation::new(usize::MAX, usize::MAX);
         let result = tokenize("if   3 \n\twhile");
 
         use TokenType::*;
@@ -73,7 +75,7 @@ mod tests {
 
     #[test]
     fn test_tokenize_comment() {
-        let loc = CodeLocation::new(-1, -1);
+        let loc = CodeLocation::new(usize::MAX, usize::MAX);
         let result = tokenize("if   3 \n\n\\\\Comment\n#Another\n\twhile");
 
         use TokenType::*;
@@ -89,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_tokenize_operators_basic() {
-        let loc = CodeLocation::new(-1, -1);
+        let loc = CodeLocation::new(usize::MAX, usize::MAX);
         let result = tokenize("var = 1 + 2");
 
         use TokenType::*;
@@ -107,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_tokenize_operators_all() {
-        let loc = CodeLocation::new(-1, -1);
+        let loc = CodeLocation::new(usize::MAX, usize::MAX);
         let result = tokenize("var 1 + - * 1/2 = == != < <= > >= 2");
 
         use TokenType::*;
@@ -136,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_tokenize_punctuation_basic() {
-        let loc = CodeLocation::new(-1, -1);
+        let loc = CodeLocation::new(usize::MAX, usize::MAX);
         let result = tokenize("{var = (1 + 2, 3);}");
 
         use TokenType::*;
