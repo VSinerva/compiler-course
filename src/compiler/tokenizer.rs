@@ -80,9 +80,40 @@ mod tests {
     }
 
     #[test]
+    fn test_tokenize_code_location() {
+        let result = tokenize("if 3\n  while");
+
+        use TokenType::*;
+        assert_eq!(
+            result,
+            vec!(
+                Token::new("if", Identifier, CodeLocation::new(1, 1)),
+                Token::new("3", Integer, CodeLocation::new(1, 4)),
+                Token::new("while", Identifier, CodeLocation::new(2, 3)),
+            )
+        );
+        assert_ne!(
+            result,
+            vec!(
+                Token::new("if", Identifier, CodeLocation::new(1, 1)),
+                Token::new("3", Integer, CodeLocation::new(1, 5)),
+                Token::new("while", Identifier, CodeLocation::new(2, 3)),
+            )
+        );
+        assert_ne!(
+            result,
+            vec!(
+                Token::new("if", Identifier, CodeLocation::new(1, 1)),
+                Token::new("3", Integer, CodeLocation::new(1, 4)),
+                Token::new("while", Identifier, CodeLocation::new(1, 3)),
+            )
+        );
+    }
+
+    #[test]
     fn test_tokenize_comment() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("if   3 \n\n\\\\Comment\n#Another\n\twhile");
+        let result = tokenize("if   3 \n\n//Comment\n#Another\n\twhile");
 
         use TokenType::*;
         assert_eq!(
@@ -165,5 +196,11 @@ mod tests {
                 Token::new("}", Punctuation, loc),
             )
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_tokenize_wrong_token() {
+        tokenize("if 3\n  while %");
     }
 }
