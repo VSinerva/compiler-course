@@ -5,7 +5,7 @@ pub fn tokenize(code: &str) -> Vec<Token> {
     // We only want to compile the regexes once
     // The ordering of these is important!
     let regexes = vec![
-        (TokenType::Comment, Regex::new(r"^(\\\\|#).*\n").unwrap()),
+        (TokenType::Comment, Regex::new(r"^(//|#).*").unwrap()),
         (TokenType::Whitespace, Regex::new(r"^[\s\t\n]+").unwrap()),
         (
             TokenType::Operator,
@@ -21,32 +21,38 @@ pub fn tokenize(code: &str) -> Vec<Token> {
 
     let mut tokens = Vec::new();
 
-    let mut pos = 0;
+    for (line_number, line) in code.lines().enumerate() {
+        let mut pos = 0;
 
-    while pos < code.len() {
-        let mut valid_token = false;
+        while pos < line.len() {
+            let mut valid_token = false;
 
-        for (token_type, regex_matcher) in &regexes {
-            let found_match = regex_matcher.find(&code[pos..]);
+            for (token_type, regex_matcher) in &regexes {
+                let found_match = regex_matcher.find(&line[pos..]);
 
-            if let Some(token) = found_match {
-                if !token_type.ignore() {
-                    let start = pos + token.start();
-                    let end = pos + token.end();
-                    tokens.push(Token::new(
-                        &code[start..end],
-                        *token_type,
-                        CodeLocation::new(start, end),
-                    ));
+                if let Some(token) = found_match {
+                    if !token_type.ignore() {
+                        let start = pos + token.start();
+                        let end = pos + token.end();
+                        tokens.push(Token::new(
+                            &line[start..end],
+                            *token_type,
+                            CodeLocation::new(line_number + 1, start + 1), // 1-indexing
+                        ));
+                    }
+
+                    valid_token = true;
+                    pos += token.end();
                 }
-
-                valid_token = true;
-                pos += token.end();
             }
-        }
 
-        if !valid_token {
-            panic!("Invalid token at {pos}");
+            if !valid_token {
+                panic!(
+                    "Invalid token on line {} in position {}",
+                    line_number + 1,
+                    pos + 1
+                );
+            }
         }
     }
 

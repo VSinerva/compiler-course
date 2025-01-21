@@ -1,24 +1,24 @@
 #[derive(Debug, Copy, Clone)]
 pub struct CodeLocation {
-    start: usize,
-    end: usize,
+    line: usize,
+    char: usize,
 }
 
 impl CodeLocation {
-    pub fn new(start: usize, end: usize) -> Self {
-        Self { start, end }
+    pub fn new(line: usize, char: usize) -> Self {
+        Self { line, char }
     }
 }
 
 impl PartialEq for CodeLocation {
     fn eq(&self, other: &Self) -> bool {
-        let true_match = self.start == other.start && self.end == other.end;
+        let true_match = self.line == other.line && self.char == other.char;
 
         // For testing purposes
-        let simulated_match = self.start == usize::MAX
-            || self.end == usize::MAX
-            || other.start == usize::MAX
-            || other.end == usize::MAX;
+        let simulated_match = self.line == usize::MAX
+            || self.char == usize::MAX
+            || other.line == usize::MAX
+            || other.char == usize::MAX;
 
         true_match || simulated_match
     }
