@@ -16,6 +16,7 @@ pkgs.mkShell {
       rustfmt
       clippy
       docker
+      python3
     ])
     ++ [ build-command ];
 }
