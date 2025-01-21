@@ -45,16 +45,16 @@ impl TokenType {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Token {
-    text: String,
+pub struct Token<'source> {
+    text: &'source str,
     token_type: TokenType,
     loc: CodeLocation,
 }
 
-impl Token {
-    pub fn new(text: &str, token_type: TokenType, loc: CodeLocation) -> Self {
+impl<'source> Token<'source> {
+    pub fn new(text: &'source str, token_type: TokenType, loc: CodeLocation) -> Self {
         Self {
-            text: text.to_string(),
+            text,
             token_type,
             loc,
         }
