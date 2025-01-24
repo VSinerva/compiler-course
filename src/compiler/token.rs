@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Copy, Clone)]
 pub struct CodeLocation {
     line: usize,
@@ -7,6 +9,12 @@ pub struct CodeLocation {
 impl CodeLocation {
     pub fn new(line: usize, char: usize) -> Self {
         Self { line, char }
+    }
+}
+
+impl fmt::Display for CodeLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.line, self.char)
     }
 }
 
@@ -32,23 +40,21 @@ pub enum TokenType {
     Operator,
     Punctuation,
     Whitespace,
+    End,
 }
 
 impl TokenType {
     pub fn ignore(&self) -> bool {
         use TokenType::*;
-        match self {
-            Whitespace | Comment => true,
-            _ => false,
-        }
+        matches!(self, Whitespace | Comment)
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token<'source> {
-    text: &'source str,
-    token_type: TokenType,
-    loc: CodeLocation,
+    pub text: &'source str,
+    pub token_type: TokenType,
+    pub loc: CodeLocation,
 }
 
 impl<'source> Token<'source> {
@@ -58,5 +64,11 @@ impl<'source> Token<'source> {
             token_type,
             loc,
         }
+    }
+}
+
+impl<'source> fmt::Display for Token<'source> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?} ``{}`` at {}", self.token_type, self.text, self.loc)
     }
 }

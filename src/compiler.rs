@@ -1,6 +1,9 @@
+mod ast;
+mod parser;
 mod token;
 mod tokenizer;
 
 pub fn compile(code: &str) {
-    tokenizer::tokenize(code);
+    let tokens = tokenizer::tokenize(code);
+    parser::parse(&tokens);
 }

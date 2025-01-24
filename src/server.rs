@@ -1,5 +1,4 @@
 use crate::compiler;
-use json;
 use std::{
     io::prelude::*,
     net::{IpAddr, TcpListener, TcpStream},
