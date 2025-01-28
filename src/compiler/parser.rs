@@ -83,18 +83,31 @@ fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expr
     Identifier(token.text)
 }
 
-fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn parse_factor<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
     match peek(pos, tokens).token_type {
         TokenType::Integer => parse_int_literal(pos, tokens),
         TokenType::Identifier => parse_identifier(pos, tokens),
-        _ => panic!("Unexpected token {}", peek(pos, tokens)),
+        _ => panic!("Unexpected {}", peek(pos, tokens)),
     }
+}
+
+fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    let mut left = parse_factor(pos, tokens);
+
+    while ["*", "/"].contains(&peek(pos, tokens).text) {
+        let operator_token = next_expect_strings(pos, tokens, &vec!["*", "/"]);
+        let right = parse_factor(pos, tokens);
+
+        left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
+    }
+
+    left
 }
 
 fn parse_expression<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
     let mut left = parse_term(pos, tokens);
 
-    while vec!["+", "-"].contains(&peek(pos, tokens).text) {
+    while ["+", "-"].contains(&peek(pos, tokens).text) {
         let operator_token = next_expect_strings(pos, tokens, &vec!["+", "-"]);
         let right = parse_term(pos, tokens);
 
@@ -138,6 +151,18 @@ mod tests {
             result,
             BinaryOp(Box::new(IntLiteral(4)), "-", Box::new(IntLiteral(56)))
         );
+
+        let result = parse(&vec![new_int("1"), new_id("*"), new_int("2")]);
+        assert_eq!(
+            result,
+            BinaryOp(Box::new(IntLiteral(1)), "*", Box::new(IntLiteral(2)))
+        );
+
+        let result = parse(&vec![new_int("1"), new_id("/"), new_int("2")]);
+        assert_eq!(
+            result,
+            BinaryOp(Box::new(IntLiteral(1)), "/", Box::new(IntLiteral(2)))
+        );
     }
 
     #[test]
@@ -174,6 +199,49 @@ mod tests {
                 )),
                 "-",
                 Box::new(IntLiteral(3))
+            )
+        );
+    }
+
+    #[test]
+    fn test_binary_op_precedence() {
+        let result = parse(&vec![
+            new_int("1"),
+            new_id("+"),
+            new_int("2"),
+            new_id("*"),
+            new_int("3"),
+        ]);
+        assert_eq!(
+            result,
+            BinaryOp(
+                Box::new(IntLiteral(1)),
+                "+",
+                Box::new(BinaryOp(
+                    Box::new(IntLiteral(2)),
+                    "*",
+                    Box::new(IntLiteral(3))
+                )),
+            )
+        );
+
+        let result = parse(&vec![
+            new_int("1"),
+            new_id("-"),
+            new_int("2"),
+            new_id("/"),
+            new_int("3"),
+        ]);
+        assert_eq!(
+            result,
+            BinaryOp(
+                Box::new(IntLiteral(1)),
+                "-",
+                Box::new(BinaryOp(
+                    Box::new(IntLiteral(2)),
+                    "/",
+                    Box::new(IntLiteral(3))
+                )),
             )
         );
     }
