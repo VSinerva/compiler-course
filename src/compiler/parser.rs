@@ -95,6 +95,16 @@ fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'
     )
 }
 
+fn parse_bool_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'source> {
+    let token = next_expect_type(pos, tokens, TokenType::Identifier);
+
+    match token.text {
+        "true" => BoolLiteral(true),
+        "false" => BoolLiteral(false),
+        _ => panic!("Fatal parser error! Expected bool literal but found {token}"),
+    }
+}
+
 fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
     let token = next_expect_type(pos, tokens, TokenType::Identifier);
     Identifier(token.text)
@@ -115,22 +125,45 @@ fn parse_factor<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expressi
     }
     match token.token_type {
         TokenType::Integer => parse_int_literal(pos, tokens),
-        TokenType::Identifier => parse_identifier(pos, tokens),
+        TokenType::Identifier => match token.text {
+            "true" | "false" => parse_bool_literal(pos, tokens),
+            _ => parse_identifier(pos, tokens),
+        },
         _ => panic!("Unexpected {}", peek(pos, tokens)),
     }
 }
 
+fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    next_expect_string(pos, tokens, "if");
+    let condition = Box::new(parse_expression(pos, tokens));
+    next_expect_string(pos, tokens, "then");
+    let then_expr = Box::new(parse_expression(pos, tokens));
+
+    let else_expr = match peek(pos, tokens).text {
+        "else" => {
+            next_expect_string(pos, tokens, "else");
+            Some(Box::new(parse_expression(pos, tokens)))
+        }
+        _ => None,
+    };
+
+    Conditional(condition, then_expr, else_expr)
+}
+
 fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    let mut left = parse_factor(pos, tokens);
+    match peek(pos, tokens).text {
+        "if" => parse_conditional(pos, tokens),
+        _ => {
+            let mut left = parse_factor(pos, tokens);
+            while ["*", "/"].contains(&peek(pos, tokens).text) {
+                let operator_token = next_expect_strings(pos, tokens, &vec!["*", "/"]);
+                let right = parse_factor(pos, tokens);
 
-    while ["*", "/"].contains(&peek(pos, tokens).text) {
-        let operator_token = next_expect_strings(pos, tokens, &vec!["*", "/"]);
-        let right = parse_factor(pos, tokens);
-
-        left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
+                left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
+            }
+            left
+        }
     }
-
-    left
 }
 
 fn parse_expression<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
@@ -408,7 +441,6 @@ mod tests {
 
     #[test]
     fn test_nested_if_then_else() {
-        // if true then if false then 1 else 2 else 3
         let result = parse(&vec![
             new_id("if"),
             new_id("true"),
