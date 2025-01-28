@@ -6,7 +6,16 @@ use crate::compiler::{
 pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
     let mut pos = 0;
 
-    parse_expression(&mut pos, tokens)
+    let result = parse_expression(&mut pos, tokens);
+
+    if pos != tokens.len() {
+        panic!(
+            "Parsing naturally stopped after {}, despite there being more tokens!",
+            tokens[pos]
+        );
+    }
+
+    result
 }
 
 fn peek<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Token<'source> {
@@ -324,6 +333,44 @@ mod tests {
             new_id("+"),
             new_int("2"),
             new_id("*"),
+            new_int("3"),
+        ]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_empty() {
+        parse(&vec![]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_start() {
+        parse(&vec![new_int("1"), new_int("2"), new_id("+"), new_int("3")]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_middle() {
+        parse(&vec![
+            new_int("1"),
+            new_id("+"),
+            new_int("2"),
+            new_int("2"),
+            new_id("+"),
+            new_int("3"),
+        ]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_end() {
+        parse(&vec![
+            new_int("1"),
+            new_id("+"),
+            new_int("2"),
+            new_int("2"),
+            new_id("+"),
             new_int("3"),
         ]);
     }
