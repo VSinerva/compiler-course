@@ -92,10 +92,16 @@ fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression
 }
 
 fn parse_expression<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    let left = parse_term(pos, tokens);
-    let operator_token = next_expect_strings(pos, tokens, &vec!["+", "-"]);
-    let right = parse_term(pos, tokens);
-    Expression::BinaryOp(Box::new(left), operator_token.text, Box::new(right))
+    let mut left = parse_term(pos, tokens);
+
+    while vec!["+", "-"].contains(&peek(pos, tokens).text) {
+        let operator_token = next_expect_strings(pos, tokens, &vec!["+", "-"]);
+        let right = parse_term(pos, tokens);
+
+        left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
+    }
+
+    left
 }
 
 #[cfg(test)]
@@ -161,13 +167,13 @@ mod tests {
         assert_eq!(
             result,
             BinaryOp(
-                Box::new(IntLiteral(1)),
-                "+",
                 Box::new(BinaryOp(
-                    Box::new(IntLiteral(2)),
-                    "-",
-                    Box::new(IntLiteral(3))
-                ))
+                    Box::new(IntLiteral(1)),
+                    "+",
+                    Box::new(IntLiteral(2))
+                )),
+                "-",
+                Box::new(IntLiteral(3))
             )
         );
     }
