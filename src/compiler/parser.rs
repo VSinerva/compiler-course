@@ -78,10 +78,23 @@ fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'
     )
 }
 
+fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    let token = next_expect_type(pos, tokens, TokenType::Identifier);
+    Identifier(token.text)
+}
+
+fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    match peek(pos, tokens).token_type {
+        TokenType::Integer => parse_int_literal(pos, tokens),
+        TokenType::Identifier => parse_identifier(pos, tokens),
+        _ => panic!("Unexpected token {}", peek(pos, tokens)),
+    }
+}
+
 fn parse_expression<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    let left = parse_int_literal(pos, tokens);
+    let left = parse_term(pos, tokens);
     let operator_token = next_expect_strings(pos, tokens, &vec!["+", "-"]);
-    let right = parse_int_literal(pos, tokens);
+    let right = parse_term(pos, tokens);
     Expression::BinaryOp(Box::new(left), operator_token.text, Box::new(right))
 }
 
