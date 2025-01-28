@@ -325,6 +325,118 @@ mod tests {
     }
 
     #[test]
+    fn test_if_then() {
+        let result = parse(&vec![
+            new_id("if"),
+            new_int("1"),
+            new_id("+"),
+            new_int("2"),
+            new_id("then"),
+            new_int("3"),
+        ]);
+        assert_eq!(
+            result,
+            Conditional(
+                Box::new(BinaryOp(
+                    Box::new(IntLiteral(1)),
+                    "+",
+                    Box::new(IntLiteral(2))
+                )),
+                Box::new(IntLiteral(3)),
+                None,
+            )
+        );
+    }
+
+    #[test]
+    fn test_if_then_else() {
+        let result = parse(&vec![
+            new_id("if"),
+            new_id("a"),
+            new_id("then"),
+            new_id("b"),
+            new_id("+"),
+            new_id("c"),
+            new_id("else"),
+            new_int("1"),
+            new_id("*"),
+            new_int("2"),
+        ]);
+        assert_eq!(
+            result,
+            Conditional(
+                Box::new(Identifier("a")),
+                Box::new(BinaryOp(
+                    Box::new(Identifier("b")),
+                    "+",
+                    Box::new(Identifier("c")),
+                )),
+                Some(Box::new(BinaryOp(
+                    Box::new(IntLiteral(1)),
+                    "*",
+                    Box::new(IntLiteral(2)),
+                )))
+            )
+        );
+    }
+
+    #[test]
+    fn test_embedded_if_then_else() {
+        let result = parse(&vec![
+            new_int("1"),
+            new_id("+"),
+            new_id("if"),
+            new_id("true"),
+            new_id("then"),
+            new_int("2"),
+            new_id("else"),
+            new_int("3"),
+        ]);
+        assert_eq!(
+            result,
+            BinaryOp(
+                Box::new(IntLiteral(1)),
+                "+",
+                Box::new(Conditional(
+                    Box::new(BoolLiteral(true)),
+                    Box::new(IntLiteral(2)),
+                    Some(Box::new(IntLiteral(3)))
+                ))
+            )
+        );
+    }
+
+    #[test]
+    fn test_nested_if_then_else() {
+        // if true then if false then 1 else 2 else 3
+        let result = parse(&vec![
+            new_id("if"),
+            new_id("true"),
+            new_id("then"),
+            new_id("if"),
+            new_id("false"),
+            new_id("then"),
+            new_int("1"),
+            new_id("else"),
+            new_int("2"),
+            new_id("else"),
+            new_int("3"),
+        ]);
+        assert_eq!(
+            result,
+            Conditional(
+                Box::new(BoolLiteral(true)),
+                Box::new(Conditional(
+                    Box::new(BoolLiteral(false)),
+                    Box::new(IntLiteral(1)),
+                    Some(Box::new(IntLiteral(2)))
+                )),
+                Some(Box::new(IntLiteral(3)))
+            )
+        );
+    }
+
+    #[test]
     #[should_panic]
     fn test_parenthesized_mismatched() {
         parse(&vec![
@@ -335,6 +447,12 @@ mod tests {
             new_id("*"),
             new_int("3"),
         ]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_if_no_then() {
+        parse(&vec![new_id("if"), new_id("true")]);
     }
 
     #[test]

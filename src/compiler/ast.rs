@@ -1,4 +1,3 @@
-#[expect(dead_code)]
 #[derive(Debug, PartialEq)]
 pub enum Expression<'source> {
     IntLiteral(u32),
@@ -8,5 +7,10 @@ pub enum Expression<'source> {
         Box<Expression<'source>>,
         &'source str,
         Box<Expression<'source>>,
+    ),
+    Conditional(
+        Box<Expression<'source>>,
+        Box<Expression<'source>>,
+        Option<Box<Expression<'source>>>,
     ),
 }
