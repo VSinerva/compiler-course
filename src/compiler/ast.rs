@@ -3,7 +3,7 @@
 pub enum Expression<'source> {
     IntLiteral(u32),
     BoolLiteral(bool),
-    Indentifier(String),
+    Identifier(&'source str),
     BinaryOp(
         Box<Expression<'source>>,
         &'source str,

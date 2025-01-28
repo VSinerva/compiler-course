@@ -120,4 +120,42 @@ mod tests {
             BinaryOp(Box::new(IntLiteral(4)), "-", Box::new(IntLiteral(56)))
         );
     }
+
+    #[test]
+    fn test_binary_op_identifier() {
+        let result = parse(&vec![new_id("a"), new_id("+"), new_int("1")]);
+        assert_eq!(
+            result,
+            BinaryOp(Box::new(Identifier("a")), "+", Box::new(IntLiteral(1)))
+        );
+
+        let result = parse(&vec![new_int("1"), new_id("-"), new_id("a")]);
+        assert_eq!(
+            result,
+            BinaryOp(Box::new(IntLiteral(1)), "-", Box::new(Identifier("a")))
+        );
+    }
+
+    #[test]
+    fn test_binary_op_multiple() {
+        let result = parse(&vec![
+            new_int("1"),
+            new_id("+"),
+            new_int("2"),
+            new_id("-"),
+            new_int("3"),
+        ]);
+        assert_eq!(
+            result,
+            BinaryOp(
+                Box::new(IntLiteral(1)),
+                "+",
+                Box::new(BinaryOp(
+                    Box::new(IntLiteral(2)),
+                    "-",
+                    Box::new(IntLiteral(3))
+                ))
+            )
+        );
+    }
 }
