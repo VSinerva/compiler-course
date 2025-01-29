@@ -488,8 +488,39 @@ mod tests {
         ]);
         assert_eq!(
             result,
-            FunCall(vec![Box::new(Identifier("a")), Box::new(Identifier("b")),])
+            FunCall(
+                "f",
+                vec![Box::new(Identifier("a")), Box::new(Identifier("b")),]
+            )
         );
+
+        let result = parse(&vec![
+            new_id("f"),
+            new_punc("("),
+            new_id("a"),
+            new_punc(","),
+            new_int("1"),
+            new_id("+"),
+            new_int("2"),
+            new_punc(")"),
+        ]);
+        assert_eq!(
+            result,
+            FunCall(
+                "f",
+                vec![
+                    Box::new(Identifier("a")),
+                    Box::new(BinaryOp(
+                        Box::new(IntLiteral(1)),
+                        "+",
+                        Box::new(IntLiteral(2)),
+                    )),
+                ]
+            )
+        );
+
+        let result = parse(&vec![new_id("f"), new_punc("("), new_punc(")")]);
+        assert_eq!(result, FunCall("f", vec![]));
     }
 
     #[test]
@@ -507,10 +538,13 @@ mod tests {
         ]);
         assert_eq!(
             result,
-            FunCall(vec![
-                Box::new(Identifier("a")),
-                Box::new(FunCall(vec![Box::new(Identifier("b"))])),
-            ])
+            FunCall(
+                "f",
+                vec![
+                    Box::new(Identifier("a")),
+                    Box::new(FunCall("g", vec![Box::new(Identifier("b"))])),
+                ]
+            )
         );
     }
 
@@ -529,7 +563,7 @@ mod tests {
             BinaryOp(
                 Box::new(IntLiteral(1)),
                 "+",
-                Box::new(FunCall(vec![Box::new(Identifier("a"))]))
+                Box::new(FunCall("f", vec![Box::new(Identifier("a"))]))
             )
         );
     }
