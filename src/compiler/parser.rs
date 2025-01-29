@@ -105,9 +105,36 @@ fn parse_bool_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<
     }
 }
 
+fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    let identifier = next_expect_type(pos, tokens, TokenType::Identifier);
+
+    next_expect_string(pos, tokens, "(");
+
+    let mut arguments = Vec::new();
+
+    // If/loop used instead of while to show that we will always use break to exit the loop
+    if peek(pos, tokens).text != ")" {
+        loop {
+            arguments.push(Box::new(parse_expression(pos, tokens)));
+
+            match peek(pos, tokens).text {
+                "," => next_expect_string(pos, tokens, ","),
+                _ => break, // Break out of the loop. Intentionally causes a panic with a missing comma
+            };
+        }
+    }
+    next_expect_string(pos, tokens, ")");
+
+    FunCall(identifier.text, arguments)
+}
+
 fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    let token = next_expect_type(pos, tokens, TokenType::Identifier);
-    Identifier(token.text)
+    if peek(&mut (*pos + 1), tokens).text == "(" {
+        parse_function(pos, tokens)
+    } else {
+        let token = next_expect_type(pos, tokens, TokenType::Identifier);
+        Identifier(token.text)
+    }
 }
 
 fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
