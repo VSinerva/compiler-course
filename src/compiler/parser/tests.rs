@@ -50,6 +50,44 @@ macro_rules! bool_ast {
 }
 
 #[test]
+#[should_panic]
+fn test_empty() {
+    parse(&vec![]);
+}
+
+#[test]
+#[should_panic]
+fn test_invalid_start() {
+    parse(&vec![int_tok("1"), int_tok("2"), id_tok("+"), int_tok("3")]);
+}
+
+#[test]
+#[should_panic]
+fn test_invalid_middle() {
+    parse(&vec![
+        int_tok("1"),
+        id_tok("+"),
+        int_tok("2"),
+        int_tok("2"),
+        id_tok("+"),
+        int_tok("3"),
+    ]);
+}
+
+#[test]
+#[should_panic]
+fn test_invalid_end() {
+    parse(&vec![
+        int_tok("1"),
+        id_tok("+"),
+        int_tok("2"),
+        int_tok("2"),
+        id_tok("+"),
+        int_tok("3"),
+    ]);
+}
+
+#[test]
 fn test_binary_op_basic() {
     let result = parse(&vec![int_tok("1"), id_tok("+"), int_tok("23")]);
     assert_eq!(result, BinaryOp(int_ast!(1), "+", int_ast!(23)));
@@ -130,7 +168,10 @@ fn test_parenthesized() {
         result,
         BinaryOp(bin_ast!(int_ast!(1), "+", int_ast!(2)), "*", int_ast!(3),)
     );
+}
 
+#[test]
+fn test_parenthesized_nested() {
     let result = parse(&vec![
         id_tok("("),
         id_tok("("),
@@ -146,6 +187,19 @@ fn test_parenthesized() {
         result,
         BinaryOp(bin_ast!(int_ast!(1), "-", int_ast!(2)), "/", int_ast!(3),)
     );
+}
+
+#[test]
+#[should_panic]
+fn test_parenthesized_mismatched() {
+    parse(&vec![
+        id_tok("("),
+        int_tok("1"),
+        id_tok("+"),
+        int_tok("2"),
+        id_tok("*"),
+        int_tok("3"),
+    ]);
 }
 
 #[test]
@@ -189,7 +243,7 @@ fn test_if_then_else() {
 }
 
 #[test]
-fn test_embedded_if_then_else() {
+fn test_if_then_else_embedded() {
     let result = parse(&vec![
         int_tok("1"),
         id_tok("+"),
@@ -211,7 +265,7 @@ fn test_embedded_if_then_else() {
 }
 
 #[test]
-fn test_nested_if_then_else() {
+fn test_if_then_else_nested() {
     let result = parse(&vec![
         id_tok("if"),
         id_tok("true"),
@@ -237,6 +291,12 @@ fn test_nested_if_then_else() {
             Some(int_ast!(3))
         )
     );
+}
+
+#[test]
+#[should_panic]
+fn test_if_no_then() {
+    parse(&vec![id_tok("if"), id_tok("true")]);
 }
 
 #[test]
@@ -277,6 +337,26 @@ fn test_func_basic() {
 }
 
 #[test]
+fn test_func_embedded() {
+    let result = parse(&vec![
+        int_tok("1"),
+        id_tok("+"),
+        id_tok("f"),
+        punc_tok("("),
+        id_tok("a"),
+        punc_tok(")"),
+    ]);
+    assert_eq!(
+        result,
+        BinaryOp(
+            int_ast!(1),
+            "+",
+            Box::new(FunCall("f", vec![Identifier("a")]))
+        )
+    );
+}
+
+#[test]
 fn test_func_nested() {
     let result = parse(&vec![
         id_tok("f"),
@@ -299,39 +379,6 @@ fn test_func_nested() {
 }
 
 #[test]
-fn test_func_embedded() {
-    let result = parse(&vec![
-        int_tok("1"),
-        id_tok("+"),
-        id_tok("f"),
-        punc_tok("("),
-        id_tok("a"),
-        punc_tok(")"),
-    ]);
-    assert_eq!(
-        result,
-        BinaryOp(
-            int_ast!(1),
-            "+",
-            Box::new(FunCall("f", vec![Identifier("a")]))
-        )
-    );
-}
-
-#[test]
-#[should_panic]
-fn test_parenthesized_mismatched() {
-    parse(&vec![
-        id_tok("("),
-        int_tok("1"),
-        id_tok("+"),
-        int_tok("2"),
-        id_tok("*"),
-        int_tok("3"),
-    ]);
-}
-
-#[test]
 #[should_panic]
 fn test_func_missing_comma() {
     parse(&vec![
@@ -347,48 +394,4 @@ fn test_func_missing_comma() {
 #[should_panic]
 fn test_func_missing_close() {
     parse(&vec![id_tok("f"), punc_tok("("), id_tok("a")]);
-}
-
-#[test]
-#[should_panic]
-fn test_if_no_then() {
-    parse(&vec![id_tok("if"), id_tok("true")]);
-}
-
-#[test]
-#[should_panic]
-fn test_empty() {
-    parse(&vec![]);
-}
-
-#[test]
-#[should_panic]
-fn test_invalid_start() {
-    parse(&vec![int_tok("1"), int_tok("2"), id_tok("+"), int_tok("3")]);
-}
-
-#[test]
-#[should_panic]
-fn test_invalid_middle() {
-    parse(&vec![
-        int_tok("1"),
-        id_tok("+"),
-        int_tok("2"),
-        int_tok("2"),
-        id_tok("+"),
-        int_tok("3"),
-    ]);
-}
-
-#[test]
-#[should_panic]
-fn test_invalid_end() {
-    parse(&vec![
-        int_tok("1"),
-        id_tok("+"),
-        int_tok("2"),
-        int_tok("2"),
-        id_tok("+"),
-        int_tok("3"),
-    ]);
 }
