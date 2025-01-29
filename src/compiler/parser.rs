@@ -200,6 +200,14 @@ mod tests {
         )
     }
 
+    fn new_punc(text: &str) -> Token {
+        Token::new(
+            text,
+            TokenType::Punctuation,
+            CodeLocation::new(usize::MAX, usize::MAX),
+        )
+    }
+
     #[test]
     fn test_binary_op_basic() {
         let result = parse(&vec![new_int("1"), new_id("+"), new_int("23")]);
@@ -469,6 +477,64 @@ mod tests {
     }
 
     #[test]
+    fn test_func_basic() {
+        let result = parse(&vec![
+            new_id("f"),
+            new_punc("("),
+            new_id("a"),
+            new_punc(","),
+            new_id("b"),
+            new_punc(")"),
+        ]);
+        assert_eq!(
+            result,
+            FunCall(vec![Box::new(Identifier("a")), Box::new(Identifier("b")),])
+        );
+    }
+
+    #[test]
+    fn test_func_nested() {
+        let result = parse(&vec![
+            new_id("f"),
+            new_punc("("),
+            new_id("a"),
+            new_punc(","),
+            new_id("g"),
+            new_punc("("),
+            new_id("b"),
+            new_punc(")"),
+            new_punc(")"),
+        ]);
+        assert_eq!(
+            result,
+            FunCall(vec![
+                Box::new(Identifier("a")),
+                Box::new(FunCall(vec![Box::new(Identifier("b"))])),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_func_embedded() {
+        let result = parse(&vec![
+            new_int("1"),
+            new_id("+"),
+            new_id("f"),
+            new_punc("("),
+            new_id("a"),
+            new_punc(")"),
+        ]);
+        assert_eq!(
+            result,
+            BinaryOp(
+                Box::new(IntLiteral(1)),
+                "+",
+                Box::new(FunCall(vec![Box::new(Identifier("a"))]))
+            )
+        );
+    }
+
+    #[test]
     #[should_panic]
     fn test_parenthesized_mismatched() {
         parse(&vec![
@@ -479,6 +545,24 @@ mod tests {
             new_id("*"),
             new_int("3"),
         ]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_func_missing_comma() {
+        parse(&vec![
+            new_id("f"),
+            new_punc("("),
+            new_id("a"),
+            new_id("b"),
+            new_punc(")"),
+        ]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_func_missing_close() {
+        parse(&vec![new_id("f"), new_punc("("), new_id("a")]);
     }
 
     #[test]
