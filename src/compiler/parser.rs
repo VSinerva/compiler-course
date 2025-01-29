@@ -5,8 +5,7 @@ use crate::compiler::{
 
 pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
     let mut pos = 0;
-
-    let result = parse_expression(&mut pos, tokens);
+    let result = parse_expression(0, &mut pos, tokens);
 
     if pos != tokens.len() {
         panic!(
@@ -18,45 +17,134 @@ pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
     result
 }
 
-fn peek<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Token<'source> {
-    if let Some(token) = tokens.get(*pos) {
-        token.clone()
-    } else if let Some(last_token) = tokens.get(*pos - 1) {
-        Token::new("", TokenType::End, last_token.loc)
+fn parse_expression<'source>(
+    level: usize,
+    pos: &mut usize,
+    tokens: &[Token<'source>],
+) -> Expression<'source> {
+    const LEFT_ASSOC_BIN_OPS: [&[&str]; 2] = [&["+", "-"], &["*", "/"]];
+
+    if level == LEFT_ASSOC_BIN_OPS.len() {
+        match peek(pos, tokens).text {
+            "if" => parse_conditional(pos, tokens),
+            "(" => parse_parenthesized(pos, tokens),
+            _ => parse_term(pos, tokens),
+        }
     } else {
-        panic!("Input to parser appears to be empty!");
+        let mut left = parse_expression(level + 1, pos, tokens);
+        while LEFT_ASSOC_BIN_OPS[level].contains(&peek(pos, tokens).text) {
+            let operator_token = consume_strings(pos, tokens, LEFT_ASSOC_BIN_OPS[level]);
+            let right = parse_expression(level + 1, pos, tokens);
+
+            left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
+        }
+        left
     }
 }
 
-fn next<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Token<'source> {
+fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    consume_string(pos, tokens, "if");
+    let condition = Box::new(parse_expression(0, pos, tokens));
+    consume_string(pos, tokens, "then");
+    let then_expr = Box::new(parse_expression(0, pos, tokens));
+
+    let else_expr = match peek(pos, tokens).text {
+        "else" => {
+            consume_string(pos, tokens, "else");
+            Some(Box::new(parse_expression(0, pos, tokens)))
+        }
+        _ => None,
+    };
+
+    Conditional(condition, then_expr, else_expr)
+}
+
+fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    consume_string(pos, tokens, "(");
+    let expression = parse_expression(0, pos, tokens);
+    consume_string(pos, tokens, ")");
+    expression
+}
+
+fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
     let token = peek(pos, tokens);
-    *pos += 1;
-    token
-}
 
-fn next_expect_types<'source>(
-    pos: &mut usize,
-    tokens: &[Token<'source>],
-    types: &Vec<TokenType>,
-) -> Token<'source> {
-    let token = next(pos, tokens);
-
-    if types.contains(&token.token_type) {
-        token
-    } else {
-        panic!(
-            "Parsing error: expected one of {:?} but found {}",
-            types, token
-        );
+    match token.token_type {
+        TokenType::Integer => parse_int_literal(pos, tokens),
+        TokenType::Identifier => match token.text {
+            "true" | "false" => parse_bool_literal(pos, tokens),
+            _ => {
+                if peek(&mut (*pos + 1), tokens).text == "(" {
+                    parse_function(pos, tokens)
+                } else {
+                    parse_identifier(pos, tokens)
+                }
+            }
+        },
+        _ => panic!("Unexpected {}", token),
     }
 }
 
-fn next_expect_strings<'source>(
+fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    let identifier = consume_type(pos, tokens, TokenType::Identifier);
+    consume_string(pos, tokens, "(");
+
+    let mut arguments = Vec::new();
+    // If/loop used instead of while to show that we will always use break to exit the loop
+    if peek(pos, tokens).text != ")" {
+        loop {
+            arguments.push(parse_expression(0, pos, tokens));
+
+            match peek(pos, tokens).text {
+                "," => consume_string(pos, tokens, ","),
+                _ => break, // Break out of the loop. Intentionally causes a panic with a missing comma
+            };
+        }
+    }
+    consume_string(pos, tokens, ")");
+    FunCall(identifier.text, arguments)
+}
+
+fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'source> {
+    let token = consume_type(pos, tokens, TokenType::Integer);
+
+    IntLiteral(
+        token
+            .text
+            .parse::<u32>()
+            .unwrap_or_else(|_| panic!("Fatal parser error! Invalid value in token {token}")),
+    )
+}
+
+fn parse_bool_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'source> {
+    let token = consume_type(pos, tokens, TokenType::Identifier);
+
+    match token.text {
+        "true" => BoolLiteral(true),
+        "false" => BoolLiteral(false),
+        _ => panic!("Fatal parser error! Expected bool literal but found {token}"),
+    }
+}
+
+fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    let token = consume_type(pos, tokens, TokenType::Identifier);
+    Identifier(token.text)
+}
+
+fn consume_string<'source>(
     pos: &mut usize,
     tokens: &[Token<'source>],
-    strings: &Vec<&str>,
+    expected_string: &str,
 ) -> Token<'source> {
-    let token = next(pos, tokens);
+    consume_strings(pos, tokens, &[expected_string])
+}
+
+fn consume_strings<'source>(
+    pos: &mut usize,
+    tokens: &[Token<'source>],
+    strings: &[&str],
+) -> Token<'source> {
+    let token = consume(pos, tokens);
 
     if strings.contains(&token.text) {
         token
@@ -68,142 +156,45 @@ fn next_expect_strings<'source>(
     }
 }
 
-fn next_expect_string<'source>(
-    pos: &mut usize,
-    tokens: &[Token<'source>],
-    expected_string: &str,
-) -> Token<'source> {
-    next_expect_strings(pos, tokens, &vec![expected_string])
-}
-
-fn next_expect_type<'source>(
+fn consume_type<'source>(
     pos: &mut usize,
     tokens: &[Token<'source>],
     expected_type: TokenType,
 ) -> Token<'source> {
-    next_expect_types(pos, tokens, &vec![expected_type])
+    consume_types(pos, tokens, &[expected_type])
 }
 
-fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'source> {
-    let token = next_expect_type(pos, tokens, TokenType::Integer);
+fn consume_types<'source>(
+    pos: &mut usize,
+    tokens: &[Token<'source>],
+    types: &[TokenType],
+) -> Token<'source> {
+    let token = consume(pos, tokens);
 
-    IntLiteral(
+    if types.contains(&token.token_type) {
         token
-            .text
-            .parse::<u32>()
-            .unwrap_or_else(|_| panic!("Fatal parser error! Invalid value in token {token}")),
-    )
-}
-
-fn parse_bool_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'source> {
-    let token = next_expect_type(pos, tokens, TokenType::Identifier);
-
-    match token.text {
-        "true" => BoolLiteral(true),
-        "false" => BoolLiteral(false),
-        _ => panic!("Fatal parser error! Expected bool literal but found {token}"),
-    }
-}
-
-fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    let identifier = next_expect_type(pos, tokens, TokenType::Identifier);
-
-    next_expect_string(pos, tokens, "(");
-
-    let mut arguments = Vec::new();
-
-    // If/loop used instead of while to show that we will always use break to exit the loop
-    if peek(pos, tokens).text != ")" {
-        loop {
-            arguments.push(parse_expression(pos, tokens));
-
-            match peek(pos, tokens).text {
-                "," => next_expect_string(pos, tokens, ","),
-                _ => break, // Break out of the loop. Intentionally causes a panic with a missing comma
-            };
-        }
-    }
-    next_expect_string(pos, tokens, ")");
-
-    FunCall(identifier.text, arguments)
-}
-
-fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    if peek(&mut (*pos + 1), tokens).text == "(" {
-        parse_function(pos, tokens)
     } else {
-        let token = next_expect_type(pos, tokens, TokenType::Identifier);
-        Identifier(token.text)
+        panic!(
+            "Parsing error: expected one of {:?} but found {}",
+            types, token
+        );
     }
 }
 
-fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    next_expect_string(pos, tokens, "(");
-    let expression = parse_expression(pos, tokens);
-    next_expect_string(pos, tokens, ")");
-    expression
-}
-
-fn parse_factor<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn consume<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Token<'source> {
     let token = peek(pos, tokens);
-
-    if token.text == "(" {
-        return parse_parenthesized(pos, tokens);
-    }
-    match token.token_type {
-        TokenType::Integer => parse_int_literal(pos, tokens),
-        TokenType::Identifier => match token.text {
-            "true" | "false" => parse_bool_literal(pos, tokens),
-            _ => parse_identifier(pos, tokens),
-        },
-        _ => panic!("Unexpected {}", token),
-    }
+    *pos += 1;
+    token
 }
 
-fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    next_expect_string(pos, tokens, "if");
-    let condition = Box::new(parse_expression(pos, tokens));
-    next_expect_string(pos, tokens, "then");
-    let then_expr = Box::new(parse_expression(pos, tokens));
-
-    let else_expr = match peek(pos, tokens).text {
-        "else" => {
-            next_expect_string(pos, tokens, "else");
-            Some(Box::new(parse_expression(pos, tokens)))
-        }
-        _ => None,
-    };
-
-    Conditional(condition, then_expr, else_expr)
-}
-
-fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    match peek(pos, tokens).text {
-        "if" => parse_conditional(pos, tokens),
-        _ => {
-            let mut left = parse_factor(pos, tokens);
-            while ["*", "/"].contains(&peek(pos, tokens).text) {
-                let operator_token = next_expect_strings(pos, tokens, &vec!["*", "/"]);
-                let right = parse_factor(pos, tokens);
-
-                left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
-            }
-            left
-        }
+fn peek<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Token<'source> {
+    if let Some(token) = tokens.get(*pos) {
+        token.clone()
+    } else if let Some(last_token) = tokens.get(*pos - 1) {
+        Token::new("", TokenType::End, last_token.loc)
+    } else {
+        panic!("Input to parser appears to be empty!");
     }
-}
-
-fn parse_expression<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    let mut left = parse_term(pos, tokens);
-
-    while ["+", "-"].contains(&peek(pos, tokens).text) {
-        let operator_token = next_expect_strings(pos, tokens, &vec!["+", "-"]);
-        let right = parse_term(pos, tokens);
-
-        left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
-    }
-
-    left
 }
 
 #[cfg(test)]
