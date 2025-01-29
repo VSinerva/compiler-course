@@ -10,8 +10,8 @@ pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
 
     if pos != tokens.len() {
         panic!(
-            "Parsing naturally stopped after {}, despite there being more tokens!",
-            tokens[pos]
+            "Parsing naturally stopped at {}, despite there being more tokens!",
+            peek(&mut pos, tokens)
         );
     }
 
@@ -145,7 +145,7 @@ fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> E
 }
 
 fn parse_factor<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    let token = &peek(pos, tokens);
+    let token = peek(pos, tokens);
 
     if token.text == "(" {
         return parse_parenthesized(pos, tokens);
@@ -156,7 +156,7 @@ fn parse_factor<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expressi
             "true" | "false" => parse_bool_literal(pos, tokens),
             _ => parse_identifier(pos, tokens),
         },
-        _ => panic!("Unexpected {}", peek(pos, tokens)),
+        _ => panic!("Unexpected {}", token),
     }
 }
 
