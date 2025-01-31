@@ -156,10 +156,21 @@ fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expressio
     loop {
         expressions.push(parse_block_level_expressions(pos, tokens));
 
+        // Last expression left as return expression, if no semicolon is present
         if peek(pos, tokens).text == "}" {
             break;
         }
-        consume_string(pos, tokens, ";");
+
+        // Blocks don't need to be followed by a semicolon, but can be
+        if peek(&mut (*pos - 1), tokens).text == "}" {
+            if peek(pos, tokens).text == ";" {
+                consume_string(pos, tokens, ";");
+            }
+        } else {
+            consume_string(pos, tokens, ";");
+        }
+
+        // If the last expression of the block ended in a semicolon, empty return
         if peek(pos, tokens).text == "}" {
             expressions.push(EmptyLiteral());
             break;

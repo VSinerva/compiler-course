@@ -450,7 +450,7 @@ fn test_omitting_semicolons() {
                 Box::new(Block(vec![Identifier("a")])),
                 None
             ),
-            Block(vec![Identifier("b")]),
+            Identifier("b"),
         ])
     );
 
@@ -463,7 +463,7 @@ fn test_omitting_semicolons() {
                 Box::new(Block(vec![Identifier("a")])),
                 None
             ),
-            Block(vec![Identifier("b")]),
+            Identifier("b"),
         ])
     );
 
@@ -476,7 +476,7 @@ fn test_omitting_semicolons() {
                 Box::new(Block(vec![Identifier("a")])),
                 Some(Box::new(Block(vec![Identifier("b")])))
             ),
-            Block(vec![Identifier("c")]),
+            Identifier("c"),
         ])
     );
 
