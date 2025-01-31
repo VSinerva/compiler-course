@@ -36,7 +36,7 @@ fn parse_expression<'source>(
         &["+", "-"],             // 5
         &["*", "/", "%"],        // 6
         &["not", "-"],           // 7
-                                 // 8
+                                 // 8, everything not explicitly listed above goes here
     ];
 
     match level {
@@ -92,7 +92,8 @@ fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression
         },
         TokenType::Punctuation => match token.text {
             "(" => parse_parenthesized(pos, tokens),
-            _ => todo!(),
+            "{" => parse_block(pos, tokens),
+            _ => unreachable!(),
         },
         _ => panic!("Unexpected {}", token),
     }
@@ -120,6 +121,27 @@ fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> E
     let expression = parse_expression(0, pos, tokens);
     consume_string(pos, tokens, ")");
     expression
+}
+
+fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    consume_string(pos, tokens, "{");
+
+    let mut expressions = Vec::new();
+    loop {
+        expressions.push(parse_expression(0, pos, tokens));
+
+        if peek(pos, tokens).text == "}" {
+            break;
+        }
+        consume_string(pos, tokens, ";");
+        if peek(pos, tokens).text == "}" {
+            expressions.push(EmptyLiteral());
+            break;
+        }
+    }
+
+    consume_string(pos, tokens, "}");
+    Block(expressions)
 }
 
 fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
