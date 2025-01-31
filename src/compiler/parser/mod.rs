@@ -105,6 +105,7 @@ fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression
         TokenType::Integer => parse_int_literal(pos, tokens),
         TokenType::Identifier => match token.text {
             "if" => parse_conditional(pos, tokens),
+            "while" => parse_while_loop(pos, tokens),
             "true" | "false" => parse_bool_literal(pos, tokens),
             "var" => panic!("Invalid variable declaration {}", token),
             _ => {
@@ -150,6 +151,15 @@ fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Exp
     };
 
     Conditional(start.loc, condition, then_expr, else_expr)
+}
+
+fn parse_while_loop<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    let start = consume_string(pos, tokens, "while");
+    let condition = Box::new(parse_expression(0, pos, tokens));
+    consume_string(pos, tokens, "do");
+    let do_expr = Box::new(parse_expression(0, pos, tokens));
+
+    While(start.loc, condition, do_expr)
 }
 
 fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
