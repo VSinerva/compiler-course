@@ -27,7 +27,14 @@ fn parse_expression<'source>(
     pos: &mut usize,
     tokens: &[Token<'source>],
 ) -> Expression<'source> {
-    const LEFT_ASSOC_BIN_OPS: [&[&str]; 2] = [&["+", "-"], &["*", "/"]];
+    const LEFT_ASSOC_BIN_OPS: [&[&str]; 6] = [
+        &["or"],
+        &["and"],
+        &["==", "!="],
+        &["<", "<=", "=>", ">"],
+        &["+", "-"],
+        &["*", "/", "%"],
+    ];
 
     if level == LEFT_ASSOC_BIN_OPS.len() {
         parse_term(pos, tokens)

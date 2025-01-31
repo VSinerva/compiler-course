@@ -65,6 +65,31 @@ fn test_binary_op_basic() {
 }
 
 #[test]
+fn test_binary_op_all_levels() {
+    let result = parse(&tokenize("1 * 2 + 3 < 4 == 5 and 6 or 7"));
+    assert_eq!(
+        result,
+        BinaryOp(
+            bin_ast!(
+                bin_ast!(
+                    bin_ast!(
+                        bin_ast!(bin_ast!(int_ast!(1), "*", int_ast!(2)), "+", int_ast!(3)),
+                        "<",
+                        int_ast!(4)
+                    ),
+                    "==",
+                    int_ast!(5)
+                ),
+                "and",
+                int_ast!(6)
+            ),
+            "or",
+            int_ast!(7)
+        )
+    );
+}
+
+#[test]
 fn test_binary_op_identifier() {
     let result = parse(&tokenize("a + 1"));
     assert_eq!(result, BinaryOp(id_ast!("a"), "+", int_ast!(1)));
