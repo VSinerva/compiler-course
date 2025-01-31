@@ -651,3 +651,70 @@ fn test_while_do_nested() {
 fn test_while_no_do() {
     parse(&tokenize("while true"));
 }
+
+#[test]
+fn test_multiple_top_levels() {
+    let result = parse(&tokenize("a;"));
+    assert_eq!(result, block_ast!(vec![id_ast!("a"), empty_ast!()]));
+
+    let result = parse(&tokenize("a; b"));
+    assert_eq!(result, block_ast!(vec![id_ast!("a"), id_ast!("b")]));
+
+    let result = parse(&tokenize("{}{}"));
+    assert_eq!(
+        result,
+        block_ast!(vec![block_ast!(vec![]), block_ast!(vec![])])
+    );
+}
+
+#[test]
+fn test_large() {
+    let result = parse(&tokenize(
+        "
+{
+    while f() do {
+        x = 10;
+        y = if g(x) then {
+            x = x + 1;
+            x
+        } else {
+            g(x)
+        }
+        g(y);
+    }
+    123
+}
+",
+    ));
+
+    assert_eq!(
+        result,
+        block_ast!(vec![
+            while_ast!(
+                fun_ast_b!("f", vec![]),
+                block_ast_b!(vec![
+                    bin_ast!(id_ast_b!("x"), "=", int_ast_b!(10)),
+                    bin_ast!(
+                        id_ast_b!("y"),
+                        "=",
+                        con_ast_b!(
+                            fun_ast_b!("g", vec![id_ast!("x")]),
+                            block_ast_b!(vec![
+                                bin_ast!(
+                                    id_ast_b!("x"),
+                                    "=",
+                                    bin_ast_b!(id_ast_b!("x"), "+", int_ast_b!(1))
+                                ),
+                                id_ast!("x")
+                            ]),
+                            Some(block_ast_b!(vec![fun_ast!("g", vec![id_ast!("x")])]))
+                        )
+                    ),
+                    fun_ast!("g", vec![id_ast!("y")]),
+                    empty_ast!()
+                ])
+            ),
+            int_ast!(123),
+        ])
+    );
+}
