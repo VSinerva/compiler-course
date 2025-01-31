@@ -401,3 +401,31 @@ fn test_block_unmatched() {
 fn test_block_missing_semicolon() {
     parse(&tokenize("{ a = 1\nb }"));
 }
+
+#[test]
+fn test_var_basic() {
+    let result = parse(&tokenize("var x = 1"));
+    assert_eq!(result, VarDeclaration("x", int_ast!(1)));
+
+    let result = parse(&tokenize("{ var x = 1; x = 2; }"));
+    assert_eq!(
+        result,
+        Block(vec![
+            VarDeclaration("x", int_ast!(1)),
+            BinaryOp(id_ast!("x"), "=", int_ast!(2)),
+            EmptyLiteral()
+        ])
+    );
+}
+
+#[test]
+#[should_panic]
+fn test_var_chain() {
+    parse(&tokenize("var x = var y = 1"));
+}
+
+#[test]
+#[should_panic]
+fn test_var_embedded() {
+    parse(&tokenize("if true then var x = 3"));
+}

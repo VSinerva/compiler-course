@@ -5,6 +5,7 @@ pub enum Expression<'source> {
     BoolLiteral(bool),
     Identifier(&'source str),
     UnaryOp(&'source str, Box<Expression<'source>>),
+    VarDeclaration(&'source str, Box<Expression<'source>>),
     BinaryOp(
         Box<Expression<'source>>,
         &'source str,
