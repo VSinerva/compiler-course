@@ -129,7 +129,16 @@ fn test_binary_op_precedence() {
 }
 
 #[test]
-fn test_assignment() {
+fn test_assignment_basic() {
+    let result = parse(&tokenize("a = 1 + 2"));
+    assert_eq!(
+        result,
+        BinaryOp(id_ast!("a"), "=", bin_ast!(int_ast!(1), "+", int_ast!(2)))
+    );
+}
+
+#[test]
+fn test_assignment_chain() {
     let result = parse(&tokenize("a = b = 1 + 2"));
     assert_eq!(
         result,
@@ -142,7 +151,19 @@ fn test_assignment() {
 }
 
 #[test]
-fn test_unary() {
+fn test_unary_basic() {
+    let result = parse(&tokenize("not x"));
+    assert_eq!(result, UnaryOp("not", id_ast!("x")));
+
+    let result = parse(&tokenize("-x"));
+    assert_eq!(result, UnaryOp("-", id_ast!("x")));
+
+    let result = parse(&tokenize("-1"));
+    assert_eq!(result, UnaryOp("-", int_ast!(1)));
+}
+
+#[test]
+fn test_unary_chain() {
     let result = parse(&tokenize("not not x"));
     assert_eq!(result, UnaryOp("not", un_ast!("not", id_ast!("x"))));
 
