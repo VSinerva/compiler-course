@@ -10,16 +10,47 @@ use crate::compiler::{
 
 pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
     let mut pos = 0;
-    let result = parse_block_level_expressions(&mut pos, tokens);
+
+    let first_expression = parse_block_level_expressions(&mut pos, tokens);
 
     if pos != tokens.len() {
-        panic!(
-            "Parsing naturally stopped at {}, despite there being more tokens!",
-            peek(&mut pos, tokens)
-        );
-    }
+        let mut expressions = vec![first_expression];
 
-    result
+        // Blocks don't need to be followed by a semicolon, but can be
+        if peek(&mut (pos - 1), tokens).text == "}" {
+            if peek(&mut pos, tokens).text == ";" {
+                consume_string(&mut pos, tokens, ";");
+            }
+        } else {
+            consume_string(&mut pos, tokens, ";");
+        }
+
+        while peek(&mut pos, tokens).token_type != TokenType::End {
+            expressions.push(parse_block_level_expressions(&mut pos, tokens));
+
+            if peek(&mut pos, tokens).token_type == TokenType::End {
+                break;
+            }
+
+            // Blocks don't need to be followed by a semicolon, but can be
+            if peek(&mut (pos - 1), tokens).text == "}" {
+                if peek(&mut pos, tokens).text == ";" {
+                    consume_string(&mut pos, tokens, ";");
+                }
+            } else {
+                consume_string(&mut pos, tokens, ";");
+            }
+        }
+
+        let last_token = peek(&mut (pos - 1), tokens);
+        if last_token.text == ";" {
+            expressions.push(EmptyLiteral(last_token.loc));
+        }
+
+        Block(tokens[0].loc, expressions)
+    } else {
+        first_expression
+    }
 }
 
 // Horrible name, basically used to get the full expressions contained
@@ -173,7 +204,7 @@ fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expressio
     let start = consume_string(pos, tokens, "{");
 
     let mut expressions = Vec::new();
-    loop {
+    while peek(pos, tokens).text != "}" {
         expressions.push(parse_block_level_expressions(pos, tokens));
 
         // Last expression left as return expression, if no semicolon is present
