@@ -160,6 +160,12 @@ fn test_unary_basic() {
 
     let result = parse(&tokenize("-1"));
     assert_eq!(result, UnaryOp("-", int_ast!(1)));
+
+    let result = parse(&tokenize("-1 + 2"));
+    assert_eq!(
+        result,
+        BinaryOp(un_ast!("-", int_ast!(1)), "+", int_ast!(2))
+    );
 }
 
 #[test]
@@ -172,6 +178,12 @@ fn test_unary_chain() {
 
     let result = parse(&tokenize("--1"));
     assert_eq!(result, UnaryOp("-", un_ast!("-", int_ast!(1))));
+
+    let result = parse(&tokenize("--1 + 2"));
+    assert_eq!(
+        result,
+        BinaryOp(un_ast!("-", un_ast!("-", int_ast!(1))), "+", int_ast!(2))
+    );
 }
 
 #[test]
