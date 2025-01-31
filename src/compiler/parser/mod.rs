@@ -30,11 +30,7 @@ fn parse_expression<'source>(
     const LEFT_ASSOC_BIN_OPS: [&[&str]; 2] = [&["+", "-"], &["*", "/"]];
 
     if level == LEFT_ASSOC_BIN_OPS.len() {
-        match peek(pos, tokens).text {
-            "if" => parse_conditional(pos, tokens),
-            "(" => parse_parenthesized(pos, tokens),
-            _ => parse_term(pos, tokens),
-        }
+        parse_term(pos, tokens)
     } else {
         let mut left = parse_expression(level + 1, pos, tokens);
         while LEFT_ASSOC_BIN_OPS[level].contains(&peek(pos, tokens).text) {
@@ -44,6 +40,30 @@ fn parse_expression<'source>(
             left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
         }
         left
+    }
+}
+
+fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+    let token = peek(pos, tokens);
+
+    match token.token_type {
+        TokenType::Integer => parse_int_literal(pos, tokens),
+        TokenType::Identifier => match token.text {
+            "if" => parse_conditional(pos, tokens),
+            "true" | "false" => parse_bool_literal(pos, tokens),
+            _ => {
+                if peek(&mut (*pos + 1), tokens).text == "(" {
+                    parse_function(pos, tokens)
+                } else {
+                    parse_identifier(pos, tokens)
+                }
+            }
+        },
+        TokenType::Punctuation => match token.text {
+            "(" => parse_parenthesized(pos, tokens),
+            _ => todo!(),
+        },
+        _ => panic!("Unexpected {}", token),
     }
 }
 
@@ -69,25 +89,6 @@ fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> E
     let expression = parse_expression(0, pos, tokens);
     consume_string(pos, tokens, ")");
     expression
-}
-
-fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    let token = peek(pos, tokens);
-
-    match token.token_type {
-        TokenType::Integer => parse_int_literal(pos, tokens),
-        TokenType::Identifier => match token.text {
-            "true" | "false" => parse_bool_literal(pos, tokens),
-            _ => {
-                if peek(&mut (*pos + 1), tokens).text == "(" {
-                    parse_function(pos, tokens)
-                } else {
-                    parse_identifier(pos, tokens)
-                }
-            }
-        },
-        _ => panic!("Unexpected {}", token),
-    }
 }
 
 fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
