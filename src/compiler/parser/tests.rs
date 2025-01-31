@@ -109,6 +109,18 @@ macro_rules! var_ast {
     };
 }
 
+macro_rules! while_ast {
+    ($x:expr, $y:expr) => {
+        While(CodeLocation::new(usize::MAX, usize::MAX), $x, $y)
+    };
+}
+
+macro_rules! while_ast_b {
+    ($x:expr, $y:expr) => {
+        Box::new(while_ast!($x, $y))
+    };
+}
+
 #[test]
 #[should_panic]
 fn test_empty() {
@@ -598,4 +610,44 @@ fn test_omitting_semicolons() {
 #[should_panic]
 fn test_omitting_semicolons_invalid() {
     parse(&tokenize("{ if true then { a } b c }"));
+}
+
+#[test]
+fn test_while_do() {
+    let result = parse(&tokenize("while 1 + 2 do 3"));
+    assert_eq!(
+        result,
+        while_ast!(bin_ast_b!(int_ast_b!(1), "+", int_ast_b!(2)), int_ast_b!(3))
+    );
+}
+
+#[test]
+fn test_while_do_embedded() {
+    let result = parse(&tokenize("1 + while true do 2"));
+    assert_eq!(
+        result,
+        bin_ast!(
+            int_ast_b!(1),
+            "+",
+            while_ast_b!(bool_ast_b!(true), int_ast_b!(2))
+        )
+    );
+}
+
+#[test]
+fn test_while_do_nested() {
+    let result = parse(&tokenize("while true do while false do 1"));
+    assert_eq!(
+        result,
+        while_ast!(
+            bool_ast_b!(true),
+            while_ast_b!(bool_ast_b!(false), int_ast_b!(1))
+        )
+    );
+}
+
+#[test]
+#[should_panic]
+fn test_while_no_do() {
+    parse(&tokenize("while true"));
 }

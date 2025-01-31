@@ -21,6 +21,11 @@ pub enum Expression<'source> {
         Box<Expression<'source>>,
         Option<Box<Expression<'source>>>,
     ),
+    While(
+        CodeLocation,
+        Box<Expression<'source>>,
+        Box<Expression<'source>>,
+    ),
     FunCall(CodeLocation, &'source str, Vec<Expression<'source>>),
     Block(CodeLocation, Vec<Expression<'source>>),
 }
@@ -36,6 +41,7 @@ impl<'source> Expression<'source> {
             Expression::VarDeclaration(loc, _, _) => *loc,
             Expression::BinaryOp(loc, _, _, _) => *loc,
             Expression::Conditional(loc, _, _, _) => *loc,
+            Expression::While(loc, _, _) => *loc,
             Expression::FunCall(loc, _, _) => *loc,
             Expression::Block(loc, _) => *loc,
         }
@@ -51,6 +57,7 @@ impl<'source> Expression<'source> {
             Expression::VarDeclaration(..) => "Variable declaration",
             Expression::BinaryOp(..) => "Binary operation",
             Expression::Conditional(..) => "Conditional",
+            Expression::While(_, _, _) => "While loop",
             Expression::FunCall(..) => "Function call",
             Expression::Block(..) => "Block",
         }
@@ -66,6 +73,7 @@ impl<'source> Expression<'source> {
             Expression::VarDeclaration(_, name, _) => name.to_string(),
             Expression::BinaryOp(_, _, op, _) => op.to_string(),
             Expression::Conditional(_, condition, _, _) => format!("if {}", condition),
+            Expression::While(_, condition, _) => format!("while {}", condition),
             Expression::FunCall(_, name, args) => format!("{} with {} args", name, args.len()),
             Expression::Block(_, expressions) => format!("with {} expressions", expressions.len()),
         }
