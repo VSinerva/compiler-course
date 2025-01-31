@@ -151,6 +151,12 @@ fn test_assignment_chain() {
 }
 
 #[test]
+#[should_panic]
+fn test_assignment_invalid() {
+    parse(&tokenize("a ="));
+}
+
+#[test]
 fn test_unary_basic() {
     let result = parse(&tokenize("not x"));
     assert_eq!(result, UnaryOp("not", id_ast!("x")));

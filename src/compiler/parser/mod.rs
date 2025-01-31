@@ -39,8 +39,17 @@ fn parse_expression<'source>(
     ];
 
     match level {
-        // 0 => todo!(),
-        0..=6 => {
+        0 => {
+            let left = parse_expression(level + 1, pos, tokens);
+            if OPS[level].contains(&peek(pos, tokens).text) {
+                let operator_token = consume_strings(pos, tokens, OPS[level]);
+                let right = parse_expression(level, pos, tokens);
+                BinaryOp(Box::new(left), operator_token.text, Box::new(right))
+            } else {
+                left
+            }
+        }
+        1..=6 => {
             let mut left = parse_expression(level + 1, pos, tokens);
             while OPS[level].contains(&peek(pos, tokens).text) {
                 let operator_token = consume_strings(pos, tokens, OPS[level]);
