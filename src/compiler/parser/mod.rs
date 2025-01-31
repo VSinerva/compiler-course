@@ -10,7 +10,7 @@ use crate::compiler::{
 
 pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
     let mut pos = 0;
-    let result = parse_expression(0, &mut pos, tokens);
+    let result = parse_block_level_expressions(&mut pos, tokens);
 
     if pos != tokens.len() {
         panic!(
@@ -20,6 +20,20 @@ pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
     }
 
     result
+}
+
+// Horrible name, basically used to get the full expressions contained
+// in blocks or at the top level of the program
+fn parse_block_level_expressions<'source>(
+    pos: &mut usize,
+    tokens: &[Token<'source>],
+) -> Expression<'source> {
+    // Special handling for variable declaration, since it is only allowed in very specifc places
+    if peek(pos, tokens).text == "var" {
+        parse_var_declaration(pos, tokens)
+    } else {
+        parse_expression(0, pos, tokens)
+    }
 }
 
 fn parse_expression<'source>(
@@ -82,6 +96,7 @@ fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression
         TokenType::Identifier => match token.text {
             "if" => parse_conditional(pos, tokens),
             "true" | "false" => parse_bool_literal(pos, tokens),
+            "var" => panic!("Invalid variable declaration {}", token),
             _ => {
                 if peek(&mut (*pos + 1), tokens).text == "(" {
                     parse_function(pos, tokens)
@@ -97,6 +112,17 @@ fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression
         },
         _ => panic!("Unexpected {}", token),
     }
+}
+
+fn parse_var_declaration<'source>(
+    pos: &mut usize,
+    tokens: &[Token<'source>],
+) -> Expression<'source> {
+    consume_string(pos, tokens, "var");
+    let name = consume_type(pos, tokens, TokenType::Identifier).text;
+    consume_string(pos, tokens, "=");
+    let value = parse_expression(0, pos, tokens);
+    VarDeclaration(name, Box::new(value))
 }
 
 fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
@@ -128,7 +154,7 @@ fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expressio
 
     let mut expressions = Vec::new();
     loop {
-        expressions.push(parse_expression(0, pos, tokens));
+        expressions.push(parse_block_level_expressions(pos, tokens));
 
         if peek(pos, tokens).text == "}" {
             break;
