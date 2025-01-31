@@ -429,3 +429,73 @@ fn test_var_chain() {
 fn test_var_embedded() {
     parse(&tokenize("if true then var x = 3"));
 }
+
+#[test]
+fn test_omitting_semicolons() {
+    let result = parse(&tokenize("{ { a } { b } }"));
+    assert_eq!(
+        result,
+        Block(vec![
+            Block(vec![Identifier("a")]),
+            Block(vec![Identifier("b")])
+        ])
+    );
+
+    let result = parse(&tokenize("{ if true then { a } b }"));
+    assert_eq!(
+        result,
+        Block(vec![
+            Conditional(
+                bool_ast!(true),
+                Box::new(Block(vec![Identifier("a")])),
+                None
+            ),
+            Block(vec![Identifier("b")]),
+        ])
+    );
+
+    let result = parse(&tokenize("{ if true then { a }; b }"));
+    assert_eq!(
+        result,
+        Block(vec![
+            Conditional(
+                bool_ast!(true),
+                Box::new(Block(vec![Identifier("a")])),
+                None
+            ),
+            Block(vec![Identifier("b")]),
+        ])
+    );
+
+    let result = parse(&tokenize("{ if true then { a } else { b } c }"));
+    assert_eq!(
+        result,
+        Block(vec![
+            Conditional(
+                bool_ast!(true),
+                Box::new(Block(vec![Identifier("a")])),
+                Some(Box::new(Block(vec![Identifier("b")])))
+            ),
+            Block(vec![Identifier("c")]),
+        ])
+    );
+
+    let result = parse(&tokenize("x = { { f(a) } { b } }"));
+    assert_eq!(
+        result,
+        BinaryOp(
+            id_ast!("x"),
+            "=",
+            Box::new(Block(vec![
+                Block(vec![FunCall("f", vec![Identifier("a")])]),
+                Block(vec![Identifier("b")]),
+            ]))
+        )
+    );
+}
+
+#[test]
+#[should_panic]
+fn test_omitting_semicolons_invalid() {
+    parse(&tokenize("{ if true then { a } b c }"));
+}
