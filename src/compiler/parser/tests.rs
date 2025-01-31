@@ -13,6 +13,12 @@ macro_rules! id_ast {
     };
 }
 
+macro_rules! un_ast {
+    ($x:expr, $y:expr) => {
+        Box::new(UnaryOp($x, $y))
+    };
+}
+
 macro_rules! bin_ast {
     ($x:expr, $y:expr, $z:expr) => {
         Box::new(BinaryOp($x, $y, $z))
@@ -120,6 +126,31 @@ fn test_binary_op_precedence() {
         result,
         BinaryOp(int_ast!(1), "-", bin_ast!(int_ast!(2), "/", int_ast!(3)),)
     );
+}
+
+#[test]
+fn test_assignment() {
+    let result = parse(&tokenize("a = b = 1 + 2"));
+    assert_eq!(
+        result,
+        BinaryOp(
+            id_ast!("a"),
+            "=",
+            bin_ast!(id_ast!("b"), "=", bin_ast!(int_ast!(1), "+", int_ast!(2)))
+        )
+    );
+}
+
+#[test]
+fn test_unary() {
+    let result = parse(&tokenize("not not x"));
+    assert_eq!(result, UnaryOp("not", un_ast!("not", id_ast!("x"))));
+
+    let result = parse(&tokenize("--x"));
+    assert_eq!(result, UnaryOp("-", un_ast!("-", id_ast!("x"))));
+
+    let result = parse(&tokenize("--1"));
+    assert_eq!(result, UnaryOp("-", un_ast!("-", int_ast!(1))));
 }
 
 #[test]
