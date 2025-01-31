@@ -59,7 +59,12 @@ fn parse_expression<'source>(
             if OPS[level].contains(&peek(pos, tokens).text) {
                 let operator_token = consume_strings(pos, tokens, OPS[level]);
                 let right = parse_expression(level, pos, tokens);
-                BinaryOp(Box::new(left), operator_token.text, Box::new(right))
+                BinaryOp(
+                    operator_token.loc,
+                    Box::new(left),
+                    operator_token.text,
+                    Box::new(right),
+                )
             } else {
                 left
             }
@@ -70,7 +75,12 @@ fn parse_expression<'source>(
                 let operator_token = consume_strings(pos, tokens, OPS[level]);
                 let right = parse_expression(level + 1, pos, tokens);
 
-                left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
+                left = BinaryOp(
+                    operator_token.loc,
+                    Box::new(left),
+                    operator_token.text,
+                    Box::new(right),
+                );
             }
             left
         }
@@ -78,7 +88,7 @@ fn parse_expression<'source>(
             if OPS[level].contains(&peek(pos, tokens).text) {
                 let operator_token = consume_strings(pos, tokens, OPS[level]);
                 let right = parse_expression(level, pos, tokens);
-                UnaryOp(operator_token.text, Box::new(right))
+                UnaryOp(operator_token.loc, operator_token.text, Box::new(right))
             } else {
                 parse_expression(level + 1, pos, tokens)
             }
@@ -119,14 +129,14 @@ fn parse_var_declaration<'source>(
     tokens: &[Token<'source>],
 ) -> Expression<'source> {
     consume_string(pos, tokens, "var");
-    let name = consume_type(pos, tokens, TokenType::Identifier).text;
+    let name_token = consume_type(pos, tokens, TokenType::Identifier);
     consume_string(pos, tokens, "=");
     let value = parse_expression(0, pos, tokens);
-    VarDeclaration(name, Box::new(value))
+    VarDeclaration(name_token.loc, name_token.text, Box::new(value))
 }
 
 fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    consume_string(pos, tokens, "if");
+    let start = consume_string(pos, tokens, "if");
     let condition = Box::new(parse_expression(0, pos, tokens));
     consume_string(pos, tokens, "then");
     let then_expr = Box::new(parse_expression(0, pos, tokens));
@@ -139,7 +149,7 @@ fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Exp
         _ => None,
     };
 
-    Conditional(condition, then_expr, else_expr)
+    Conditional(start.loc, condition, then_expr, else_expr)
 }
 
 fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
@@ -150,7 +160,7 @@ fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> E
 }
 
 fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
-    consume_string(pos, tokens, "{");
+    let start = consume_string(pos, tokens, "{");
 
     let mut expressions = Vec::new();
     loop {
@@ -171,14 +181,15 @@ fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expressio
         }
 
         // If the last expression of the block ended in a semicolon, empty return
-        if peek(pos, tokens).text == "}" {
-            expressions.push(EmptyLiteral());
+        let next_token = peek(pos, tokens);
+        if next_token.text == "}" {
+            expressions.push(EmptyLiteral(next_token.loc));
             break;
         }
     }
 
     consume_string(pos, tokens, "}");
-    Block(expressions)
+    Block(start.loc, expressions)
 }
 
 fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
@@ -198,13 +209,14 @@ fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expres
         }
     }
     consume_string(pos, tokens, ")");
-    FunCall(identifier.text, arguments)
+    FunCall(identifier.loc, identifier.text, arguments)
 }
 
 fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'source> {
     let token = consume_type(pos, tokens, TokenType::Integer);
 
     IntLiteral(
+        token.loc,
         token
             .text
             .parse::<u32>()
@@ -216,13 +228,13 @@ fn parse_bool_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<
     let token = consume_type(pos, tokens, TokenType::Identifier);
 
     match token.text {
-        "true" => BoolLiteral(true),
-        "false" => BoolLiteral(false),
+        "true" => BoolLiteral(token.loc, true),
+        "false" => BoolLiteral(token.loc, false),
         _ => panic!("Fatal parser error! Expected bool literal but found {token}"),
     }
 }
 
 fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
     let token = consume_type(pos, tokens, TokenType::Identifier);
-    Identifier(token.text)
+    Identifier(token.loc, token.text)
 }

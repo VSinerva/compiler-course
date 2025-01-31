@@ -1,33 +1,111 @@
 use super::*;
-use crate::compiler::tokenizer::tokenize;
+use crate::compiler::{token::CodeLocation, tokenizer::tokenize};
+
+macro_rules! bool_ast {
+    ($x:expr) => {
+        BoolLiteral(CodeLocation::new(usize::MAX, usize::MAX), $x)
+    };
+}
+
+macro_rules! bool_ast_b {
+    ($x:expr) => {
+        Box::new(bool_ast!($x))
+    };
+}
 
 macro_rules! int_ast {
     ($x:expr) => {
-        Box::new(IntLiteral($x))
+        IntLiteral(CodeLocation::new(usize::MAX, usize::MAX), $x)
+    };
+}
+
+macro_rules! int_ast_b {
+    ($x:expr) => {
+        Box::new(int_ast!($x))
     };
 }
 
 macro_rules! id_ast {
     ($x:expr) => {
-        Box::new(Identifier($x))
+        Identifier(CodeLocation::new(usize::MAX, usize::MAX), $x)
+    };
+}
+
+macro_rules! id_ast_b {
+    ($x:expr) => {
+        Box::new(id_ast!($x))
     };
 }
 
 macro_rules! un_ast {
     ($x:expr, $y:expr) => {
-        Box::new(UnaryOp($x, $y))
+        UnaryOp(CodeLocation::new(usize::MAX, usize::MAX), $x, $y)
+    };
+}
+
+macro_rules! un_ast_b {
+    ($x:expr, $y:expr) => {
+        Box::new(un_ast!($x, $y))
     };
 }
 
 macro_rules! bin_ast {
     ($x:expr, $y:expr, $z:expr) => {
-        Box::new(BinaryOp($x, $y, $z))
+        BinaryOp(CodeLocation::new(usize::MAX, usize::MAX), $x, $y, $z)
     };
 }
 
-macro_rules! bool_ast {
+macro_rules! bin_ast_b {
+    ($x:expr, $y:expr, $z:expr) => {
+        Box::new(bin_ast!($x, $y, $z))
+    };
+}
+
+macro_rules! con_ast {
+    ($x:expr, $y:expr, $z:expr) => {
+        Conditional(CodeLocation::new(usize::MAX, usize::MAX), $x, $y, $z)
+    };
+}
+
+macro_rules! con_ast_b {
+    ($x:expr, $y:expr, $z:expr) => {
+        Box::new(con_ast!($x, $y, $z))
+    };
+}
+
+macro_rules! fun_ast {
+    ($x:expr, $y:expr) => {
+        FunCall(CodeLocation::new(usize::MAX, usize::MAX), $x, $y)
+    };
+}
+
+macro_rules! fun_ast_b {
+    ($x:expr, $y:expr) => {
+        Box::new(fun_ast!($x, $y))
+    };
+}
+
+macro_rules! block_ast {
     ($x:expr) => {
-        Box::new(BoolLiteral($x))
+        Block(CodeLocation::new(usize::MAX, usize::MAX), $x)
+    };
+}
+
+macro_rules! block_ast_b {
+    ($x:expr) => {
+        Box::new(block_ast!($x))
+    };
+}
+
+macro_rules! empty_ast {
+    () => {
+        EmptyLiteral(CodeLocation::new(usize::MAX, usize::MAX))
+    };
+}
+
+macro_rules! var_ast {
+    ($x:expr, $y:expr) => {
+        VarDeclaration(CodeLocation::new(usize::MAX, usize::MAX), $x, $y)
     };
 }
 
@@ -58,16 +136,16 @@ fn test_invalid_end() {
 #[test]
 fn test_binary_op_basic() {
     let result = parse(&tokenize("1 + 23"));
-    assert_eq!(result, BinaryOp(int_ast!(1), "+", int_ast!(23)));
+    assert_eq!(result, bin_ast!(int_ast_b!(1), "+", int_ast_b!(23)));
 
     let result = parse(&tokenize("4 - 56"));
-    assert_eq!(result, BinaryOp(int_ast!(4), "-", int_ast!(56)));
+    assert_eq!(result, bin_ast!(int_ast_b!(4), "-", int_ast_b!(56)));
 
     let result = parse(&tokenize("1 * 2"));
-    assert_eq!(result, BinaryOp(int_ast!(1), "*", int_ast!(2)));
+    assert_eq!(result, bin_ast!(int_ast_b!(1), "*", int_ast_b!(2)));
 
     let result = parse(&tokenize("1 / 2"));
-    assert_eq!(result, BinaryOp(int_ast!(1), "/", int_ast!(2)));
+    assert_eq!(result, bin_ast!(int_ast_b!(1), "/", int_ast_b!(2)));
 }
 
 #[test]
@@ -75,22 +153,26 @@ fn test_binary_op_all_levels() {
     let result = parse(&tokenize("1 * 2 + 3 < 4 == 5 and 6 or 7"));
     assert_eq!(
         result,
-        BinaryOp(
-            bin_ast!(
-                bin_ast!(
-                    bin_ast!(
-                        bin_ast!(bin_ast!(int_ast!(1), "*", int_ast!(2)), "+", int_ast!(3)),
+        bin_ast!(
+            bin_ast_b!(
+                bin_ast_b!(
+                    bin_ast_b!(
+                        bin_ast_b!(
+                            bin_ast_b!(int_ast_b!(1), "*", int_ast_b!(2)),
+                            "+",
+                            int_ast_b!(3)
+                        ),
                         "<",
-                        int_ast!(4)
+                        int_ast_b!(4)
                     ),
                     "==",
-                    int_ast!(5)
+                    int_ast_b!(5)
                 ),
                 "and",
-                int_ast!(6)
+                int_ast_b!(6)
             ),
             "or",
-            int_ast!(7)
+            int_ast_b!(7)
         )
     );
 }
@@ -98,10 +180,10 @@ fn test_binary_op_all_levels() {
 #[test]
 fn test_binary_op_identifier() {
     let result = parse(&tokenize("a + 1"));
-    assert_eq!(result, BinaryOp(id_ast!("a"), "+", int_ast!(1)));
+    assert_eq!(result, bin_ast!(id_ast_b!("a"), "+", int_ast_b!(1)));
 
     let result = parse(&tokenize("1 - a"));
-    assert_eq!(result, BinaryOp(int_ast!(1), "-", id_ast!("a")));
+    assert_eq!(result, bin_ast!(int_ast_b!(1), "-", id_ast_b!("a")));
 }
 
 #[test]
@@ -109,7 +191,11 @@ fn test_binary_op_multiple() {
     let result = parse(&tokenize("1 + 2 - 3"));
     assert_eq!(
         result,
-        BinaryOp(bin_ast!(int_ast!(1), "+", int_ast!(2)), "-", int_ast!(3))
+        bin_ast!(
+            bin_ast_b!(int_ast_b!(1), "+", int_ast_b!(2)),
+            "-",
+            int_ast_b!(3)
+        )
     );
 }
 
@@ -118,13 +204,21 @@ fn test_binary_op_precedence() {
     let result = parse(&tokenize("1 + 2 * 3"));
     assert_eq!(
         result,
-        BinaryOp(int_ast!(1), "+", bin_ast!(int_ast!(2), "*", int_ast!(3)),)
+        bin_ast!(
+            int_ast_b!(1),
+            "+",
+            bin_ast_b!(int_ast_b!(2), "*", int_ast_b!(3))
+        )
     );
 
     let result = parse(&tokenize("1 - 2 / 3"));
     assert_eq!(
         result,
-        BinaryOp(int_ast!(1), "-", bin_ast!(int_ast!(2), "/", int_ast!(3)),)
+        bin_ast!(
+            int_ast_b!(1),
+            "-",
+            bin_ast_b!(int_ast_b!(2), "/", int_ast_b!(3))
+        )
     );
 }
 
@@ -133,7 +227,11 @@ fn test_assignment_basic() {
     let result = parse(&tokenize("a = 1 + 2"));
     assert_eq!(
         result,
-        BinaryOp(id_ast!("a"), "=", bin_ast!(int_ast!(1), "+", int_ast!(2)))
+        bin_ast!(
+            id_ast_b!("a"),
+            "=",
+            bin_ast_b!(int_ast_b!(1), "+", int_ast_b!(2))
+        )
     );
 }
 
@@ -142,10 +240,14 @@ fn test_assignment_chain() {
     let result = parse(&tokenize("a = b = 1 + 2"));
     assert_eq!(
         result,
-        BinaryOp(
-            id_ast!("a"),
+        bin_ast!(
+            id_ast_b!("a"),
             "=",
-            bin_ast!(id_ast!("b"), "=", bin_ast!(int_ast!(1), "+", int_ast!(2)))
+            bin_ast_b!(
+                id_ast_b!("b"),
+                "=",
+                bin_ast_b!(int_ast_b!(1), "+", int_ast_b!(2))
+            )
         )
     );
 }
@@ -159,36 +261,40 @@ fn test_assignment_invalid() {
 #[test]
 fn test_unary_basic() {
     let result = parse(&tokenize("not x"));
-    assert_eq!(result, UnaryOp("not", id_ast!("x")));
+    assert_eq!(result, un_ast!("not", id_ast_b!("x")));
 
     let result = parse(&tokenize("-x"));
-    assert_eq!(result, UnaryOp("-", id_ast!("x")));
+    assert_eq!(result, un_ast!("-", id_ast_b!("x")));
 
     let result = parse(&tokenize("-1"));
-    assert_eq!(result, UnaryOp("-", int_ast!(1)));
+    assert_eq!(result, un_ast!("-", int_ast_b!(1)));
 
     let result = parse(&tokenize("-1 + 2"));
     assert_eq!(
         result,
-        BinaryOp(un_ast!("-", int_ast!(1)), "+", int_ast!(2))
+        bin_ast!(un_ast_b!("-", int_ast_b!(1)), "+", int_ast_b!(2))
     );
 }
 
 #[test]
 fn test_unary_chain() {
     let result = parse(&tokenize("not not x"));
-    assert_eq!(result, UnaryOp("not", un_ast!("not", id_ast!("x"))));
+    assert_eq!(result, un_ast!("not", un_ast_b!("not", id_ast_b!("x"))));
 
     let result = parse(&tokenize("--x"));
-    assert_eq!(result, UnaryOp("-", un_ast!("-", id_ast!("x"))));
+    assert_eq!(result, un_ast!("-", un_ast_b!("-", id_ast_b!("x"))));
 
     let result = parse(&tokenize("--1"));
-    assert_eq!(result, UnaryOp("-", un_ast!("-", int_ast!(1))));
+    assert_eq!(result, un_ast!("-", un_ast_b!("-", int_ast_b!(1))));
 
     let result = parse(&tokenize("--1 + 2"));
     assert_eq!(
         result,
-        BinaryOp(un_ast!("-", un_ast!("-", int_ast!(1))), "+", int_ast!(2))
+        bin_ast!(
+            un_ast_b!("-", un_ast_b!("-", int_ast_b!(1))),
+            "+",
+            int_ast_b!(2)
+        )
     );
 }
 
@@ -197,7 +303,11 @@ fn test_parenthesized() {
     let result = parse(&tokenize("(1+2)*3"));
     assert_eq!(
         result,
-        BinaryOp(bin_ast!(int_ast!(1), "+", int_ast!(2)), "*", int_ast!(3),)
+        bin_ast!(
+            bin_ast_b!(int_ast_b!(1), "+", int_ast_b!(2)),
+            "*",
+            int_ast_b!(3)
+        )
     );
 }
 
@@ -206,16 +316,24 @@ fn test_parenthesized_nested() {
     let result = parse(&tokenize("((1 - 2))/3"));
     assert_eq!(
         result,
-        BinaryOp(bin_ast!(int_ast!(1), "-", int_ast!(2)), "/", int_ast!(3),)
+        bin_ast!(
+            bin_ast_b!(int_ast_b!(1), "-", int_ast_b!(2)),
+            "/",
+            int_ast_b!(3)
+        )
     );
 
     let result = parse(&tokenize("((1 + 2)*3) / 4"));
     assert_eq!(
         result,
-        BinaryOp(
-            bin_ast!(bin_ast!(int_ast!(1), "+", int_ast!(2)), "*", int_ast!(3)),
+        bin_ast!(
+            bin_ast_b!(
+                bin_ast_b!(int_ast_b!(1), "+", int_ast_b!(2)),
+                "*",
+                int_ast_b!(3)
+            ),
             "/",
-            int_ast!(4)
+            int_ast_b!(4)
         )
     );
 }
@@ -231,7 +349,11 @@ fn test_if_then() {
     let result = parse(&tokenize("if 1 + 2 then 3"));
     assert_eq!(
         result,
-        Conditional(bin_ast!(int_ast!(1), "+", int_ast!(2)), int_ast!(3), None,)
+        con_ast!(
+            bin_ast_b!(int_ast_b!(1), "+", int_ast_b!(2)),
+            int_ast_b!(3),
+            None
+        )
     );
 }
 
@@ -240,10 +362,10 @@ fn test_if_then_else() {
     let result = parse(&tokenize("if a then b + c else 1 * 2"));
     assert_eq!(
         result,
-        Conditional(
-            id_ast!("a"),
-            bin_ast!(id_ast!("b"), "+", id_ast!("c")),
-            Some(bin_ast!(int_ast!(1), "*", int_ast!(2)))
+        con_ast!(
+            id_ast_b!("a"),
+            bin_ast_b!(id_ast_b!("b"), "+", id_ast_b!("c")),
+            Some(bin_ast_b!(int_ast_b!(1), "*", int_ast_b!(2)))
         )
     );
 }
@@ -253,10 +375,10 @@ fn test_if_then_else_embedded() {
     let result = parse(&tokenize("1 + if true then 2 else 3"));
     assert_eq!(
         result,
-        BinaryOp(
-            int_ast!(1),
+        bin_ast!(
+            int_ast_b!(1),
             "+",
-            Box::new(Conditional(bool_ast!(true), int_ast!(2), Some(int_ast!(3))))
+            con_ast_b!(bool_ast_b!(true), int_ast_b!(2), Some(int_ast_b!(3)))
         )
     );
 }
@@ -266,14 +388,10 @@ fn test_if_then_else_nested() {
     let result = parse(&tokenize("if true then if false then 1 else 2 else 3"));
     assert_eq!(
         result,
-        Conditional(
-            bool_ast!(true),
-            Box::new(Conditional(
-                bool_ast!(false),
-                int_ast!(1),
-                Some(int_ast!(2))
-            )),
-            Some(int_ast!(3))
+        con_ast!(
+            bool_ast_b!(true),
+            con_ast_b!(bool_ast_b!(false), int_ast_b!(1), Some(int_ast_b!(2))),
+            Some(int_ast_b!(3))
         )
     );
 }
@@ -287,22 +405,19 @@ fn test_if_no_then() {
 #[test]
 fn test_func_basic() {
     let result = parse(&tokenize("f(a, b)"));
-    assert_eq!(
-        result,
-        FunCall("f", vec![Identifier("a"), Identifier("b"),])
-    );
+    assert_eq!(result, fun_ast!("f", vec![id_ast!("a"), id_ast!("b"),]));
 
     let result = parse(&tokenize("f(a, 1 + 2)"));
     assert_eq!(
         result,
-        FunCall(
+        fun_ast!(
             "f",
-            vec![Identifier("a"), BinaryOp(int_ast!(1), "+", int_ast!(2),),]
+            vec![id_ast!("a"), bin_ast!(int_ast_b!(1), "+", int_ast_b!(2)),]
         )
     );
 
     let result = parse(&tokenize("f()"));
-    assert_eq!(result, FunCall("f", vec![]));
+    assert_eq!(result, fun_ast!("f", vec![]));
 }
 
 #[test]
@@ -310,11 +425,7 @@ fn test_func_embedded() {
     let result = parse(&tokenize("1 + f(a)"));
     assert_eq!(
         result,
-        BinaryOp(
-            int_ast!(1),
-            "+",
-            Box::new(FunCall("f", vec![Identifier("a")]))
-        )
+        bin_ast!(int_ast_b!(1), "+", fun_ast_b!("f", vec![id_ast!("a")]))
     );
 }
 
@@ -323,10 +434,7 @@ fn test_func_nested() {
     let result = parse(&tokenize("f(a, g(b))"));
     assert_eq!(
         result,
-        FunCall(
-            "f",
-            vec![Identifier("a"), FunCall("g", vec![Identifier("b")]),]
-        )
+        fun_ast!("f", vec![id_ast!("a"), fun_ast!("g", vec![id_ast!("b")]),])
     );
 }
 
@@ -347,19 +455,19 @@ fn test_block_basic() {
     let result = parse(&tokenize("{ a = 1; b; }"));
     assert_eq!(
         result,
-        Block(vec![
-            BinaryOp(id_ast!("a"), "=", int_ast!(1)),
-            Identifier("b"),
-            EmptyLiteral()
+        block_ast!(vec![
+            bin_ast!(id_ast_b!("a"), "=", int_ast_b!(1)),
+            id_ast!("b"),
+            empty_ast!()
         ])
     );
 
     let result = parse(&tokenize("{ a = 1; b }"));
     assert_eq!(
         result,
-        Block(vec![
-            BinaryOp(id_ast!("a"), "=", int_ast!(1)),
-            Identifier("b"),
+        block_ast!(vec![
+            bin_ast!(id_ast_b!("a"), "=", int_ast_b!(1)),
+            id_ast!("b"),
         ])
     );
 }
@@ -369,10 +477,10 @@ fn test_block_embedded() {
     let result = parse(&tokenize("{ 1 + 2 } * 3"));
     assert_eq!(
         result,
-        BinaryOp(
-            Box::new(Block(vec![BinaryOp(int_ast!(1), "+", int_ast!(2))])),
+        bin_ast!(
+            block_ast_b!(vec![bin_ast!(int_ast_b!(1), "+", int_ast_b!(2))]),
             "*",
-            int_ast!(3)
+            int_ast_b!(3)
         )
     );
 }
@@ -382,10 +490,10 @@ fn test_block_nested() {
     let result = parse(&tokenize("{ a = { 1 + 2}}"));
     assert_eq!(
         result,
-        Block(vec![BinaryOp(
-            id_ast!("a"),
+        block_ast!(vec![bin_ast!(
+            id_ast_b!("a"),
             "=",
-            Box::new(Block(vec![BinaryOp(int_ast!(1), "+", int_ast!(2))])),
+            block_ast_b!(vec![bin_ast!(int_ast_b!(1), "+", int_ast_b!(2))])
         )])
     );
 }
@@ -405,15 +513,15 @@ fn test_block_missing_semicolon() {
 #[test]
 fn test_var_basic() {
     let result = parse(&tokenize("var x = 1"));
-    assert_eq!(result, VarDeclaration("x", int_ast!(1)));
+    assert_eq!(result, var_ast!("x", int_ast_b!(1)));
 
     let result = parse(&tokenize("{ var x = 1; x = 2; }"));
     assert_eq!(
         result,
-        Block(vec![
-            VarDeclaration("x", int_ast!(1)),
-            BinaryOp(id_ast!("x"), "=", int_ast!(2)),
-            EmptyLiteral()
+        block_ast!(vec![
+            var_ast!("x", int_ast_b!(1)),
+            bin_ast!(id_ast_b!("x"), "=", int_ast_b!(2)),
+            empty_ast!()
         ])
     );
 }
@@ -435,61 +543,53 @@ fn test_omitting_semicolons() {
     let result = parse(&tokenize("{ { a } { b } }"));
     assert_eq!(
         result,
-        Block(vec![
-            Block(vec![Identifier("a")]),
-            Block(vec![Identifier("b")])
+        block_ast!(vec![
+            block_ast!(vec![id_ast!("a")]),
+            block_ast!(vec![id_ast!("b")])
         ])
     );
 
     let result = parse(&tokenize("{ if true then { a } b }"));
     assert_eq!(
         result,
-        Block(vec![
-            Conditional(
-                bool_ast!(true),
-                Box::new(Block(vec![Identifier("a")])),
-                None
-            ),
-            Identifier("b"),
+        block_ast!(vec![
+            con_ast!(bool_ast_b!(true), block_ast_b!(vec![id_ast!("a")]), None),
+            id_ast!("b"),
         ])
     );
 
     let result = parse(&tokenize("{ if true then { a }; b }"));
     assert_eq!(
         result,
-        Block(vec![
-            Conditional(
-                bool_ast!(true),
-                Box::new(Block(vec![Identifier("a")])),
-                None
-            ),
-            Identifier("b"),
+        block_ast!(vec![
+            con_ast!(bool_ast_b!(true), block_ast_b!(vec![id_ast!("a")]), None),
+            id_ast!("b"),
         ])
     );
 
     let result = parse(&tokenize("{ if true then { a } else { b } c }"));
     assert_eq!(
         result,
-        Block(vec![
-            Conditional(
-                bool_ast!(true),
-                Box::new(Block(vec![Identifier("a")])),
-                Some(Box::new(Block(vec![Identifier("b")])))
+        block_ast!(vec![
+            con_ast!(
+                bool_ast_b!(true),
+                block_ast_b!(vec![id_ast!("a")]),
+                Some(block_ast_b!(vec![id_ast!("b")]))
             ),
-            Identifier("c"),
+            id_ast!("c"),
         ])
     );
 
     let result = parse(&tokenize("x = { { f(a) } { b } }"));
     assert_eq!(
         result,
-        BinaryOp(
-            id_ast!("x"),
+        bin_ast!(
+            id_ast_b!("x"),
             "=",
-            Box::new(Block(vec![
-                Block(vec![FunCall("f", vec![Identifier("a")])]),
-                Block(vec![Identifier("b")]),
-            ]))
+            block_ast_b!(vec![
+                block_ast!(vec![fun_ast!("f", vec![id_ast!("a")])]),
+                block_ast!(vec![id_ast!("b")]),
+            ])
         )
     );
 }
