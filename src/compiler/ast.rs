@@ -1,5 +1,6 @@
 #[derive(Debug, PartialEq)]
 pub enum Expression<'source> {
+    EmptyLiteral(),
     IntLiteral(u32),
     BoolLiteral(bool),
     Identifier(&'source str),
@@ -15,4 +16,5 @@ pub enum Expression<'source> {
         Option<Box<Expression<'source>>>,
     ),
     FunCall(&'source str, Vec<Expression<'source>>),
+    Block(Vec<Expression<'source>>),
 }

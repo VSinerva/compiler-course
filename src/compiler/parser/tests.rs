@@ -341,3 +341,63 @@ fn test_func_missing_comma() {
 fn test_func_missing_close() {
     parse(&tokenize("f(a"));
 }
+
+#[test]
+fn test_block_basic() {
+    let result = parse(&tokenize("{ a = 1; b; }"));
+    assert_eq!(
+        result,
+        Block(vec![
+            BinaryOp(id_ast!("a"), "=", int_ast!(1)),
+            Identifier("b"),
+            EmptyLiteral()
+        ])
+    );
+
+    let result = parse(&tokenize("{ a = 1; b }"));
+    assert_eq!(
+        result,
+        Block(vec![
+            BinaryOp(id_ast!("a"), "=", int_ast!(1)),
+            Identifier("b"),
+        ])
+    );
+}
+
+#[test]
+fn test_block_embedded() {
+    let result = parse(&tokenize("{ 1 + 2 } * 3"));
+    assert_eq!(
+        result,
+        BinaryOp(
+            Box::new(Block(vec![BinaryOp(int_ast!(1), "+", int_ast!(2))])),
+            "*",
+            int_ast!(3)
+        )
+    );
+}
+
+#[test]
+fn test_block_nested() {
+    let result = parse(&tokenize("{ a = { 1 + 2}}"));
+    assert_eq!(
+        result,
+        Block(vec![BinaryOp(
+            id_ast!("a"),
+            "=",
+            Box::new(Block(vec![BinaryOp(int_ast!(1), "+", int_ast!(2))])),
+        )])
+    );
+}
+
+#[test]
+#[should_panic]
+fn test_block_unmatched() {
+    parse(&tokenize("{ a = 1 "));
+}
+
+#[test]
+#[should_panic]
+fn test_block_missing_semicolon() {
+    parse(&tokenize("{ a = 1\nb }"));
+}
