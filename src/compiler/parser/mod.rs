@@ -27,26 +27,40 @@ fn parse_expression<'source>(
     pos: &mut usize,
     tokens: &[Token<'source>],
 ) -> Expression<'source> {
-    const LEFT_ASSOC_BIN_OPS: [&[&str]; 6] = [
+    const OPS: [&[&str]; 8] = [
+        &["="],
         &["or"],
         &["and"],
         &["==", "!="],
         &["<", "<=", "=>", ">"],
         &["+", "-"],
         &["*", "/", "%"],
+        &["not", "-"],
     ];
 
-    if level == LEFT_ASSOC_BIN_OPS.len() {
-        parse_term(pos, tokens)
-    } else {
-        let mut left = parse_expression(level + 1, pos, tokens);
-        while LEFT_ASSOC_BIN_OPS[level].contains(&peek(pos, tokens).text) {
-            let operator_token = consume_strings(pos, tokens, LEFT_ASSOC_BIN_OPS[level]);
-            let right = parse_expression(level + 1, pos, tokens);
+    match level {
+        // 0 => todo!(),
+        0..=6 => {
+            let mut left = parse_expression(level + 1, pos, tokens);
+            while OPS[level].contains(&peek(pos, tokens).text) {
+                let operator_token = consume_strings(pos, tokens, OPS[level]);
+                let right = parse_expression(level + 1, pos, tokens);
 
-            left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
+                left = BinaryOp(Box::new(left), operator_token.text, Box::new(right));
+            }
+            left
         }
-        left
+        7 => {
+            if OPS[level].contains(&peek(pos, tokens).text) {
+                let operator_token = consume_strings(pos, tokens, OPS[level]);
+                let right = parse_expression(level, pos, tokens);
+                UnaryOp(operator_token.text, Box::new(right))
+            } else {
+                parse_expression(level + 1, pos, tokens)
+            }
+        }
+        8 => parse_term(pos, tokens),
+        _ => unreachable!(),
     }
 }
 
