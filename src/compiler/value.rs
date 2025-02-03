@@ -1,12 +1,10 @@
-use std::{
-    fmt,
-    ops::{Add, Div, Mul, Neg, Not, Rem, Sub},
-};
+use std::fmt;
 
 #[derive(PartialEq, PartialOrd, Debug, Copy, Clone)]
 pub enum Value {
     Int(i64),
     Bool(bool),
+    Func(fn(&[Value]) -> Value),
     None(),
 }
 
@@ -15,111 +13,125 @@ impl fmt::Display for Value {
         match self {
             Value::Int(val) => write!(f, "{}", val),
             Value::Bool(val) => write!(f, "{}", val),
+            Value::Func(_) => write!(f, "<FunctionCall>"),
             Value::None() => write!(f, "<Unit>"),
         }
     }
 }
 
-impl Add for Value {
-    type Output = Self;
+impl Value {
+    pub fn add(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
 
-    fn add(self, other: Self) -> Self::Output {
-        if let Value::Int(val1) = self {
-            if let Value::Int(val2) = other {
-                Value::Int(val1 + val2)
-            } else {
-                panic!("Can't apply + to non-ints!")
-            }
-        } else {
+        let Value::Int(lhs) = args[0] else {
             panic!("Can't apply + to non-ints!")
-        }
+        };
+        let Value::Int(rhs) = args[1] else {
+            panic!("Can't apply + to non-ints!")
+        };
+
+        Value::Int(lhs + rhs)
     }
-}
 
-impl Mul for Value {
-    type Output = Self;
+    pub fn mul(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
 
-    fn mul(self, other: Self) -> Self::Output {
-        if let Value::Int(val1) = self {
-            if let Value::Int(val2) = other {
-                Value::Int(val1 * val2)
-            } else {
-                panic!("Can't apply * to non-ints!")
-            }
-        } else {
+        let Value::Int(lhs) = args[0] else {
             panic!("Can't apply * to non-ints!")
-        }
+        };
+        let Value::Int(rhs) = args[1] else {
+            panic!("Can't apply * to non-ints!")
+        };
+
+        Value::Int(lhs * rhs)
     }
-}
 
-impl Sub for Value {
-    type Output = Self;
+    pub fn sub(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
 
-    fn sub(self, other: Self) -> Self::Output {
-        if let Value::Int(val1) = self {
-            if let Value::Int(val2) = other {
-                Value::Int(val1 - val2)
-            } else {
-                panic!("Can't apply - to non-ints!")
-            }
-        } else {
+        let Value::Int(lhs) = args[0] else {
             panic!("Can't apply - to non-ints!")
-        }
+        };
+        let Value::Int(rhs) = args[1] else {
+            panic!("Can't apply - to non-ints!")
+        };
+
+        Value::Int(lhs - rhs)
     }
-}
 
-impl Div for Value {
-    type Output = Self;
+    pub fn div(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
 
-    fn div(self, other: Self) -> Self::Output {
-        if let Value::Int(val1) = self {
-            if let Value::Int(val2) = other {
-                Value::Int(val1 / val2)
-            } else {
-                panic!("Can't apply / to non-ints!")
-            }
-        } else {
+        let Value::Int(lhs) = args[0] else {
             panic!("Can't apply / to non-ints!")
-        }
+        };
+        let Value::Int(rhs) = args[1] else {
+            panic!("Can't apply / to non-ints!")
+        };
+
+        Value::Int(lhs / rhs)
     }
-}
 
-impl Rem for Value {
-    type Output = Self;
+    pub fn rem(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
 
-    fn rem(self, other: Self) -> Self::Output {
-        if let Value::Int(val1) = self {
-            if let Value::Int(val2) = other {
-                Value::Int(val1 % val2)
-            } else {
-                panic!("Can't apply % to non-ints!")
-            }
-        } else {
+        let Value::Int(lhs) = args[0] else {
             panic!("Can't apply % to non-ints!")
-        }
+        };
+        let Value::Int(rhs) = args[1] else {
+            panic!("Can't apply % to non-ints!")
+        };
+
+        Value::Int(lhs / rhs)
     }
-}
 
-impl Neg for Value {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        if let Value::Int(val) = self {
-            Value::Int(-val)
-        } else {
-            panic!("Can't apply - to non-ints!")
-        }
+    pub fn eq(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
+        Value::Bool(args[0] == args[1])
     }
-}
 
-impl Not for Value {
-    type Output = Self;
+    pub fn neq(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
+        Value::Bool(args[0] != args[1])
+    }
 
-    fn not(self) -> Self::Output {
-        if let Value::Bool(val) = self {
-            Value::Bool(!val)
-        } else {
-            panic!("Can't apply ! to non-bools!")
-        }
+    pub fn lt(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
+        Value::Bool(args[0] < args[1])
+    }
+
+    pub fn le(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
+        Value::Bool(args[0] <= args[1])
+    }
+
+    pub fn gt(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
+        Value::Bool(args[0] > args[1])
+    }
+
+    pub fn ge(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 2);
+        Value::Bool(args[0] >= args[1])
+    }
+
+    pub fn not(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 1);
+
+        let Value::Bool(val) = args[0] else {
+            panic!("Can't apply 'not' to non-bools!")
+        };
+
+        Value::Bool(!val)
+    }
+
+    pub fn neg(args: &[Self]) -> Self {
+        assert_eq!(args.len(), 1);
+
+        let Value::Int(val) = args[0] else {
+            panic!("Can't apply negation to non-ints!")
+        };
+
+        Value::Int(-val)
     }
 }

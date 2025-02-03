@@ -24,22 +24,20 @@ impl<'source> Interpreter<'source> {
             BoolLiteral(_, val) => Value::Bool(*val),
             Identifier(_, name) => *self.symbols.get(name),
             UnaryOp(_, op, expr) => match *op {
-                "-" => -self.interpret(expr),
-                "not" => !self.interpret(expr),
-                _ => panic!("Unrecognized unary op {}", op),
+                "-" => {
+                    let Value::Func(op_fn) = self.symbols.get("neg") else {
+                        panic!("Operator {} does not correspond to a function!", op);
+                    };
+                    op_fn(&[self.interpret(expr)])
+                }
+                _ => {
+                    let Value::Func(op_fn) = self.symbols.get(op) else {
+                        panic!("Operator {} does not correspond to a function!", op);
+                    };
+                    op_fn(&[self.interpret(expr)])
+                }
             },
             BinaryOp(_, left, op, right) => match *op {
-                "+" => self.interpret(left) + self.interpret(right),
-                "*" => self.interpret(left) * self.interpret(right),
-                "-" => self.interpret(left) - self.interpret(right),
-                "/" => self.interpret(left) / self.interpret(right),
-                "%" => self.interpret(left) % self.interpret(right),
-                "==" => Value::Bool(self.interpret(left) == self.interpret(right)),
-                "!=" => Value::Bool(self.interpret(left) != self.interpret(right)),
-                "<" => Value::Bool(self.interpret(left) < self.interpret(right)),
-                "<=" => Value::Bool(self.interpret(left) <= self.interpret(right)),
-                ">" => Value::Bool(self.interpret(left) > self.interpret(right)),
-                ">=" => Value::Bool(self.interpret(left) >= self.interpret(right)),
                 "and" => {
                     let left_val = self.interpret(left);
                     if let Value::Bool(val_l) = left_val {
@@ -83,7 +81,12 @@ impl<'source> Interpreter<'source> {
                         panic!("Assignment must have identifier as left expr!");
                     }
                 }
-                _ => panic!("Unrecognized binary op {}", op),
+                _ => {
+                    let Value::Func(op_fn) = self.symbols.get(op) else {
+                        panic!("Operator {} does not correspond to a function!", op);
+                    };
+                    op_fn(&[self.interpret(left), self.interpret(right)])
+                }
             },
             VarDeclaration(_, name, expr) => {
                 let value = self.interpret(expr);
@@ -121,7 +124,18 @@ impl<'source> Interpreter<'source> {
                 }
                 val
             }
-            FunCall(_, name, args) => todo!(), // Functions are TODO
+            FunCall(_, name, args) => {
+                let mut arg_values = Vec::new();
+                for arg in args {
+                    arg_values.push(self.interpret(arg));
+                }
+
+                let Value::Func(function) = self.symbols.get(name) else {
+                    panic!("Identifier {} does not correspond to a function!", name);
+                };
+
+                function(&arg_values)
+            }
             Block(_, expressions) => {
                 self.symbols = SymTab {
                     locals: HashMap::new(),

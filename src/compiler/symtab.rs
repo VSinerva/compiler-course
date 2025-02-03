@@ -19,8 +19,24 @@ impl<'source> SymTab<'source> {
     }
 
     pub fn new_global() -> SymTab<'source> {
+        let locals = HashMap::from([
+            ("+", Value::Func(Value::add)),
+            ("*", Value::Func(Value::mul)),
+            ("-", Value::Func(Value::sub)),
+            ("/", Value::Func(Value::div)),
+            ("%", Value::Func(Value::rem)),
+            ("==", Value::Func(Value::eq)),
+            ("!=", Value::Func(Value::neq)),
+            ("<", Value::Func(Value::lt)),
+            ("<=", Value::Func(Value::le)),
+            (">", Value::Func(Value::gt)),
+            (">=", Value::Func(Value::ge)),
+            ("not", Value::Func(Value::not)),
+            ("neg", Value::Func(Value::neg)),
+        ]);
+
         SymTab {
-            locals: HashMap::new(),
+            locals,
             parent: None,
         }
     }
