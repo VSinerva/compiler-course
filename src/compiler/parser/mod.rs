@@ -260,7 +260,7 @@ fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'
         token.loc,
         token
             .text
-            .parse::<u32>()
+            .parse::<i64>()
             .unwrap_or_else(|_| panic!("Fatal parser error! Invalid value in token {token}")),
     )
 }

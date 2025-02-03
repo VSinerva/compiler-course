@@ -4,17 +4,17 @@ use std::fmt;
 #[derive(Debug, PartialEq)]
 pub enum Expression<'source> {
     EmptyLiteral(CodeLocation),
-    IntLiteral(CodeLocation, u32),
+    IntLiteral(CodeLocation, i64),
     BoolLiteral(CodeLocation, bool),
     Identifier(CodeLocation, &'source str),
     UnaryOp(CodeLocation, &'source str, Box<Expression<'source>>),
-    VarDeclaration(CodeLocation, &'source str, Box<Expression<'source>>),
     BinaryOp(
         CodeLocation,
         Box<Expression<'source>>,
         &'source str,
         Box<Expression<'source>>,
     ),
+    VarDeclaration(CodeLocation, &'source str, Box<Expression<'source>>),
     Conditional(
         CodeLocation,
         Box<Expression<'source>>,
