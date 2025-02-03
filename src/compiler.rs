@@ -1,12 +1,13 @@
 use std::io;
 
-use interpreter::interpret;
+use interpreter::Interpreter;
 use parser::parse;
 use tokenizer::tokenize;
 
 mod ast;
 mod interpreter;
 mod parser;
+mod symtab;
 mod token;
 mod tokenizer;
 mod value;
@@ -18,10 +19,15 @@ pub fn compile(code: &str) {
 
 pub fn start_interpreter() {
     let lines = io::stdin().lines();
-
+    #[allow(clippy::manual_flatten)]
     for line in lines {
         if let Ok(code) = line {
-            println!("{}", interpret(&parse(&tokenize(&code))));
+            let tokens = tokenize(&code);
+            let ast = parse(&tokens);
+
+            let mut interpreter = Interpreter::new();
+            let val = interpreter.interpret(&ast);
+            println!("{}", val);
         }
     }
 }
