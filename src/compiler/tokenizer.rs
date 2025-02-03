@@ -9,7 +9,7 @@ pub fn tokenize(code: &str) -> Vec<Token> {
         (TokenType::Whitespace, Regex::new(r"^[\s\t\n]+").unwrap()),
         (
             TokenType::Operator,
-            Regex::new(r"^(==|!=|<=|>=|=|<|>|\+|-|\*|/)").unwrap(),
+            Regex::new(r"^(==|!=|<=|>=|=|<|>|\+|-|\*|/|\%)").unwrap(),
         ),
         (TokenType::Punctuation, Regex::new(r"^[\(\){},;]").unwrap()),
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
@@ -147,7 +147,7 @@ mod tests {
     #[test]
     fn test_tokenize_operators_all() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("var 1 + - * 1/2 = == != < <= > >= 2");
+        let result = tokenize("var 1 + - * 1/2 = == != < <= > >= 2 %");
 
         use TokenType::*;
         assert_eq!(
@@ -169,6 +169,7 @@ mod tests {
                 Token::new(">", Operator, loc),
                 Token::new(">=", Operator, loc),
                 Token::new("2", Integer, loc),
+                Token::new("%", Operator, loc),
             )
         );
     }
@@ -201,6 +202,6 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_tokenize_wrong_token() {
-        tokenize("if 3\n  while %");
+        tokenize("if 3\n  while @");
     }
 }
