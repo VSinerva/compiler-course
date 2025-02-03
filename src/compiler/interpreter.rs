@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::compiler::{
     ast::Expression::{self, *},
     symtab::SymTab,
@@ -13,7 +11,7 @@ pub struct Interpreter<'source> {
 impl<'source> Interpreter<'source> {
     pub fn new() -> Self {
         Interpreter {
-            symbols: SymTab::new_global(),
+            symbols: SymTab::new(),
         }
     }
 
@@ -89,10 +87,8 @@ impl<'source> Interpreter<'source> {
                 }
             },
             VarDeclaration(_, name, expr) => {
-                let value = self.interpret(expr);
-                if self.symbols.locals.insert(name, value).is_some() {
-                    panic!("Variable {} already defined in this scope!", name)
-                }
+                let val = self.interpret(expr);
+                self.symbols.insert(name, val);
                 Value::None()
             }
             Conditional(_, condition_expr, then_expr, else_expr) => {
@@ -137,22 +133,14 @@ impl<'source> Interpreter<'source> {
                 function(&arg_values)
             }
             Block(_, expressions) => {
-                self.symbols = SymTab {
-                    locals: HashMap::new(),
-                    parent: Some(Box::new(std::mem::take(&mut self.symbols))),
-                };
+                self.symbols.push_level();
 
                 let mut val = Value::None();
                 for expression in expressions {
                     val = self.interpret(expression);
                 }
 
-                if let Some(symbols) = &mut self.symbols.parent {
-                    self.symbols = std::mem::take(symbols);
-                } else {
-                    panic!("Non-global symbol table without parent!");
-                }
-
+                self.symbols.remove_level();
                 val
             }
         }

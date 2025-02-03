@@ -3,23 +3,21 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct SymTab<'source> {
-    pub locals: HashMap<&'source str, Value>,
-    pub parent: Option<Box<SymTab<'source>>>,
+    tables: Vec<HashMap<&'source str, Value>>,
 }
 
 impl<'source> SymTab<'source> {
     pub fn get(&mut self, symbol: &str) -> &mut Value {
-        if let Some(val) = self.locals.get_mut(symbol) {
-            val
-        } else if let Some(parent) = &mut self.parent {
-            parent.get(symbol)
-        } else {
-            panic!("No symbol {} found!", symbol);
+        for i in (0..self.tables.len()).rev() {
+            if self.tables[i].contains_key(symbol) {
+                return self.tables[i].get_mut(symbol).unwrap();
+            }
         }
+        panic!("No symbol {} found!", symbol);
     }
 
-    pub fn new_global() -> SymTab<'source> {
-        let locals = HashMap::from([
+    pub fn new() -> SymTab<'source> {
+        let globals = HashMap::from([
             ("+", Value::Func(Value::add)),
             ("*", Value::Func(Value::mul)),
             ("-", Value::Func(Value::sub)),
@@ -36,8 +34,27 @@ impl<'source> SymTab<'source> {
         ]);
 
         SymTab {
-            locals,
-            parent: None,
+            tables: vec![globals],
+        }
+    }
+
+    pub fn push_level(&mut self) {
+        self.tables.push(HashMap::new());
+    }
+
+    pub fn remove_level(&mut self) {
+        self.tables.pop();
+    }
+
+    pub fn insert(&mut self, name: &'source str, val: Value) {
+        if self
+            .tables
+            .last_mut()
+            .expect("Symbols table should never be empty!")
+            .insert(name, val)
+            .is_some()
+        {
+            panic!("Variable {} already defined in this scope!", name)
         }
     }
 }
