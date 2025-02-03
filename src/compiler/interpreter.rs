@@ -40,8 +40,40 @@ impl<'source> Interpreter<'source> {
                 "<=" => Value::Bool(self.interpret(left) <= self.interpret(right)),
                 ">" => Value::Bool(self.interpret(left) > self.interpret(right)),
                 ">=" => Value::Bool(self.interpret(left) >= self.interpret(right)),
-                "and" => self.interpret(left).and(&self.interpret(right)),
-                "or" => self.interpret(left).or(&self.interpret(right)),
+                "and" => {
+                    let left_val = self.interpret(left);
+                    if let Value::Bool(val_l) = left_val {
+                        if !val_l {
+                            Value::Bool(false)
+                        } else {
+                            let right_val = self.interpret(right);
+                            if let Value::Bool(val_r) = right_val {
+                                Value::Bool(val_r)
+                            } else {
+                                panic!("Non-bool with and operator");
+                            }
+                        }
+                    } else {
+                        panic!("Non-bool with and operator");
+                    }
+                }
+                "or" => {
+                    let left_val = self.interpret(left);
+                    if let Value::Bool(val_l) = left_val {
+                        if val_l {
+                            Value::Bool(true)
+                        } else {
+                            let right_val = self.interpret(right);
+                            if let Value::Bool(val_r) = right_val {
+                                Value::Bool(val_r)
+                            } else {
+                                panic!("Non-bool with and operator");
+                            }
+                        }
+                    } else {
+                        panic!("Non-bool with and operator");
+                    }
+                }
                 "=" => {
                     if let Expression::Identifier(_, name) = **left {
                         let val = self.interpret(right);

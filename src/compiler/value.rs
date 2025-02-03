@@ -10,32 +10,6 @@ pub enum Value {
     None(),
 }
 
-impl Value {
-    pub fn and(&self, other: &Self) -> Self {
-        if let Value::Bool(val1) = self {
-            if let Value::Bool(val2) = other {
-                Value::Bool(*val1 && *val2)
-            } else {
-                panic!("Can't apply and to non-bools!")
-            }
-        } else {
-            panic!("Can't apply and to non-bools!!")
-        }
-    }
-
-    pub fn or(&self, other: &Self) -> Self {
-        if let Value::Bool(val1) = self {
-            if let Value::Bool(val2) = other {
-                Value::Bool(*val1 || *val2)
-            } else {
-                panic!("Can't apply or to non-bools!")
-            }
-        } else {
-            panic!("Can't apply or to non-bools!!")
-        }
-    }
-}
-
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
