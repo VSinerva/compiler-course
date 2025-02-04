@@ -27,13 +27,13 @@ pub fn interpret<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sourc
         BinaryOp(_, left, op, right) => match *op {
             "and" => {
                 let left_val = interpret(left, symbols);
-                if let Value::Bool(val_l) = left_val {
-                    if !val_l {
+                if let Value::Bool(left_val) = left_val {
+                    if !left_val {
                         Value::Bool(false)
                     } else {
                         let right_val = interpret(right, symbols);
-                        if let Value::Bool(val_r) = right_val {
-                            Value::Bool(val_r)
+                        if let Value::Bool(right_val) = right_val {
+                            Value::Bool(right_val)
                         } else {
                             panic!("Non-bool with and operator");
                         }
@@ -44,19 +44,19 @@ pub fn interpret<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sourc
             }
             "or" => {
                 let left_val = interpret(left, symbols);
-                if let Value::Bool(val_l) = left_val {
-                    if val_l {
+                if let Value::Bool(left_val) = left_val {
+                    if left_val {
                         Value::Bool(true)
                     } else {
                         let right_val = interpret(right, symbols);
-                        if let Value::Bool(val_r) = right_val {
-                            Value::Bool(val_r)
+                        if let Value::Bool(right_val) = right_val {
+                            Value::Bool(right_val)
                         } else {
-                            panic!("Non-bool with and operator");
+                            panic!("Non-bool with or operator");
                         }
                     }
                 } else {
-                    panic!("Non-bool with and operator");
+                    panic!("Non-bool with or operator");
                 }
             }
             "=" => {
@@ -99,12 +99,11 @@ pub fn interpret<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sourc
             }
         }
         While(_, condition, do_expr) => {
-            let mut val = Value::None();
             loop {
                 let condition = interpret(condition, symbols);
                 if let Value::Bool(cond) = condition {
                     if cond {
-                        val = interpret(do_expr, symbols);
+                        interpret(do_expr, symbols);
                     } else {
                         break;
                     }
@@ -112,7 +111,7 @@ pub fn interpret<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sourc
                     panic!("Non-boon as while-do condition!");
                 }
             }
-            val
+            Value::None()
         }
         FunCall(_, name, args) => {
             let mut arg_values = Vec::new();
