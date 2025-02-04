@@ -4,14 +4,15 @@ mod tests;
 
 use crate::compiler::{
     ast::{
-        Expression::{self, *},
+        AstNode,
+        Expression::*,
         TypeExpression::{self},
     },
     parser::parser_utilities::*,
     token::{Token, TokenType},
 };
 
-pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
+pub fn parse<'source>(tokens: &[Token<'source>]) -> AstNode<'source> {
     let mut pos = 0;
 
     let first_expression = parse_block_level_expressions(&mut pos, tokens);
@@ -47,10 +48,10 @@ pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
 
         let last_token = peek(&mut (pos - 1), tokens);
         if last_token.text == ";" {
-            expressions.push(EmptyLiteral(last_token.loc));
+            expressions.push(AstNode::new(last_token.loc, EmptyLiteral()));
         }
 
-        Block(tokens[0].loc, expressions)
+        AstNode::new(tokens[0].loc, Block(expressions))
     } else {
         first_expression
     }
@@ -61,7 +62,7 @@ pub fn parse<'source>(tokens: &[Token<'source>]) -> Expression<'source> {
 fn parse_block_level_expressions<'source>(
     pos: &mut usize,
     tokens: &[Token<'source>],
-) -> Expression<'source> {
+) -> AstNode<'source> {
     // Special handling for variable declaration, since it is only allowed in very specifc places
     if peek(pos, tokens).text == "var" {
         parse_var_declaration(pos, tokens)
@@ -74,7 +75,7 @@ fn parse_expression<'source>(
     level: usize,
     pos: &mut usize,
     tokens: &[Token<'source>],
-) -> Expression<'source> {
+) -> AstNode<'source> {
     const OPS: [&[&str]; 8] = [
         &["="],                  // 0
         &["or"],                 // 1
@@ -93,11 +94,9 @@ fn parse_expression<'source>(
             if OPS[level].contains(&peek(pos, tokens).text) {
                 let operator_token = consume_strings(pos, tokens, OPS[level]);
                 let right = parse_expression(level, pos, tokens);
-                BinaryOp(
+                AstNode::new(
                     operator_token.loc,
-                    Box::new(left),
-                    operator_token.text,
-                    Box::new(right),
+                    BinaryOp(Box::new(left), operator_token.text, Box::new(right)),
                 )
             } else {
                 left
@@ -109,11 +108,9 @@ fn parse_expression<'source>(
                 let operator_token = consume_strings(pos, tokens, OPS[level]);
                 let right = parse_expression(level + 1, pos, tokens);
 
-                left = BinaryOp(
+                left = AstNode::new(
                     operator_token.loc,
-                    Box::new(left),
-                    operator_token.text,
-                    Box::new(right),
+                    BinaryOp(Box::new(left), operator_token.text, Box::new(right)),
                 );
             }
             left
@@ -122,7 +119,10 @@ fn parse_expression<'source>(
             if OPS[level].contains(&peek(pos, tokens).text) {
                 let operator_token = consume_strings(pos, tokens, OPS[level]);
                 let right = parse_expression(level, pos, tokens);
-                UnaryOp(operator_token.loc, operator_token.text, Box::new(right))
+                AstNode::new(
+                    operator_token.loc,
+                    UnaryOp(operator_token.text, Box::new(right)),
+                )
             } else {
                 parse_expression(level + 1, pos, tokens)
             }
@@ -132,7 +132,7 @@ fn parse_expression<'source>(
     }
 }
 
-fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> AstNode<'source> {
     let token = peek(pos, tokens);
 
     match token.token_type {
@@ -159,10 +159,7 @@ fn parse_term<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression
     }
 }
 
-fn parse_var_declaration<'source>(
-    pos: &mut usize,
-    tokens: &[Token<'source>],
-) -> Expression<'source> {
+fn parse_var_declaration<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> AstNode<'source> {
     consume_string(pos, tokens, "var");
     let name_token = consume_type(pos, tokens, TokenType::Identifier);
 
@@ -180,10 +177,13 @@ fn parse_var_declaration<'source>(
 
     consume_string(pos, tokens, "=");
     let value = parse_expression(0, pos, tokens);
-    VarDeclaration(name_token.loc, name_token.text, Box::new(value), type_expr)
+    AstNode::new(
+        name_token.loc,
+        VarDeclaration(name_token.text, Box::new(value), type_expr),
+    )
 }
 
-fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> AstNode<'source> {
     let start = consume_string(pos, tokens, "if");
     let condition = Box::new(parse_expression(0, pos, tokens));
     consume_string(pos, tokens, "then");
@@ -197,26 +197,26 @@ fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Exp
         _ => None,
     };
 
-    Conditional(start.loc, condition, then_expr, else_expr)
+    AstNode::new(start.loc, Conditional(condition, then_expr, else_expr))
 }
 
-fn parse_while_loop<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn parse_while_loop<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> AstNode<'source> {
     let start = consume_string(pos, tokens, "while");
     let condition = Box::new(parse_expression(0, pos, tokens));
     consume_string(pos, tokens, "do");
     let do_expr = Box::new(parse_expression(0, pos, tokens));
 
-    While(start.loc, condition, do_expr)
+    AstNode::new(start.loc, While(condition, do_expr))
 }
 
-fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn parse_parenthesized<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> AstNode<'source> {
     consume_string(pos, tokens, "(");
     let expression = parse_expression(0, pos, tokens);
     consume_string(pos, tokens, ")");
     expression
 }
 
-fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> AstNode<'source> {
     let start = consume_string(pos, tokens, "{");
 
     let mut expressions = Vec::new();
@@ -240,16 +240,16 @@ fn parse_block<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expressio
         // If the last expression of the block ended in a semicolon, empty return
         let next_token = peek(pos, tokens);
         if next_token.text == "}" {
-            expressions.push(EmptyLiteral(next_token.loc));
+            expressions.push(AstNode::new(next_token.loc, EmptyLiteral()));
             break;
         }
     }
 
     consume_string(pos, tokens, "}");
-    Block(start.loc, expressions)
+    AstNode::new(start.loc, Block(expressions))
 }
 
-fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> AstNode<'source> {
     let identifier = consume_type(pos, tokens, TokenType::Identifier);
     consume_string(pos, tokens, "(");
 
@@ -266,32 +266,35 @@ fn parse_function<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expres
         }
     }
     consume_string(pos, tokens, ")");
-    FunCall(identifier.loc, identifier.text, arguments)
+    AstNode::new(identifier.loc, FunCall(identifier.text, arguments))
 }
 
-fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'source> {
+fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> AstNode<'source> {
     let token = consume_type(pos, tokens, TokenType::Integer);
 
-    IntLiteral(
-        token.loc,
+    let expr = IntLiteral(
         token
             .text
             .parse::<i64>()
             .unwrap_or_else(|_| panic!("Fatal parser error! Invalid value in token {token}")),
-    )
+    );
+
+    AstNode::new(token.loc, expr)
 }
 
-fn parse_bool_literal<'source>(pos: &mut usize, tokens: &[Token]) -> Expression<'source> {
+fn parse_bool_literal<'source>(pos: &mut usize, tokens: &[Token]) -> AstNode<'source> {
     let token = consume_type(pos, tokens, TokenType::Identifier);
 
-    match token.text {
-        "true" => BoolLiteral(token.loc, true),
-        "false" => BoolLiteral(token.loc, false),
+    let expr = match token.text {
+        "true" => BoolLiteral(true),
+        "false" => BoolLiteral(false),
         _ => panic!("Fatal parser error! Expected bool literal but found {token}"),
-    }
+    };
+
+    AstNode::new(token.loc, expr)
 }
 
-fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {
+fn parse_identifier<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> AstNode<'source> {
     let token = consume_type(pos, tokens, TokenType::Identifier);
-    Identifier(token.loc, token.text)
+    AstNode::new(token.loc, Identifier(token.text))
 }

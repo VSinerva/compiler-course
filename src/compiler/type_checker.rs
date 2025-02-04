@@ -1,19 +1,16 @@
 use crate::compiler::{
-    ast::{
-        Expression::{self, *},
-        TypeExpression,
-    },
+    ast::{AstNode, Expression::*, TypeExpression},
     symtab::SymTab,
     variable::Type,
 };
 
-pub fn type_check<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'source, Type>) -> Type {
-    match ast {
-        EmptyLiteral(_) => Type::Unit,
-        IntLiteral(_, _) => Type::Int,
-        BoolLiteral(_, _) => Type::Bool,
-        Identifier(_, name) => symbols.get(name).clone(),
-        UnaryOp(_, op, expr) => match *op {
+pub fn type_check<'source>(ast: &AstNode<'source>, symbols: &mut SymTab<'source, Type>) -> Type {
+    match &ast.expr {
+        EmptyLiteral() => Type::Unit,
+        IntLiteral(_) => Type::Int,
+        BoolLiteral(_) => Type::Bool,
+        Identifier(name) => symbols.get(name).clone(),
+        UnaryOp(op, expr) => match *op {
             "-" => {
                 let expr_types = vec![type_check(expr, symbols)];
 
@@ -47,7 +44,7 @@ pub fn type_check<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sour
                 (**sig_ret_type).clone()
             }
         },
-        BinaryOp(_, left, op, right) => match *op {
+        BinaryOp(left, op, right) => match *op {
             "==" | "!=" => {
                 let left_type = type_check(left, symbols);
                 let right_type = type_check(right, symbols);
@@ -57,7 +54,7 @@ pub fn type_check<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sour
                 Type::Bool
             }
             "=" => {
-                if !matches!(**left, Identifier(_, _)) {
+                if !matches!(left.expr, Identifier(_)) {
                     panic!("Non-variable on left side of assignment!");
                 }
 
@@ -87,7 +84,7 @@ pub fn type_check<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sour
                 (**sig_ret_type).clone()
             }
         },
-        VarDeclaration(_, name, expr, type_expr) => {
+        VarDeclaration(name, expr, type_expr) => {
             let type_var = type_check(expr, symbols);
 
             if let Some(type_expr) = type_expr {
@@ -107,7 +104,7 @@ pub fn type_check<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sour
             symbols.insert(name, type_var);
             Type::Unit
         }
-        Conditional(_, condition_expr, then_expr, else_expr) => {
+        Conditional(condition_expr, then_expr, else_expr) => {
             if !matches!(type_check(condition_expr, symbols), Type::Bool) {
                 panic!("Non-bool as if-then-else condition!");
             }
@@ -124,14 +121,14 @@ pub fn type_check<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sour
                 Type::Unit
             }
         }
-        While(_, condition_expr, do_expr) => {
+        While(condition_expr, do_expr) => {
             if !matches!(type_check(condition_expr, symbols), Type::Bool) {
                 panic!("Non-bool as while-do condition!");
             }
             type_check(do_expr, symbols);
             Type::Unit
         }
-        FunCall(_, name, args) => {
+        FunCall(name, args) => {
             let mut arg_types = Vec::new();
             for arg in args {
                 arg_types.push(type_check(arg, symbols));
@@ -150,7 +147,7 @@ pub fn type_check<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sour
 
             (**sig_ret_type).clone()
         }
-        Block(_, expressions) => {
+        Block(expressions) => {
             symbols.push_level();
 
             let mut type_var = Type::Unit;

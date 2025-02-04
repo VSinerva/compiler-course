@@ -1,19 +1,19 @@
 use crate::compiler::{
-    ast::Expression::{self, *},
+    ast::{
+        AstNode,
+        Expression::{self, *},
+    },
     symtab::SymTab,
     variable::Value,
 };
 
-pub fn interpret<'source>(
-    ast: &Expression<'source>,
-    symbols: &mut SymTab<'source, Value>,
-) -> Value {
-    match ast {
-        EmptyLiteral(_) => Value::None(),
-        IntLiteral(_, val) => Value::Int(*val),
-        BoolLiteral(_, val) => Value::Bool(*val),
-        Identifier(_, name) => *symbols.get(name),
-        UnaryOp(_, op, expr) => match *op {
+pub fn interpret<'source>(ast: &AstNode<'source>, symbols: &mut SymTab<'source, Value>) -> Value {
+    match &ast.expr {
+        EmptyLiteral() => Value::None(),
+        IntLiteral(val) => Value::Int(*val),
+        BoolLiteral(val) => Value::Bool(*val),
+        Identifier(name) => *symbols.get(name),
+        UnaryOp(op, expr) => match *op {
             "-" => {
                 let Value::Func(op_fn) = symbols.get("neg") else {
                     panic!("Operator {} does not correspond to a function!", op);
@@ -27,7 +27,7 @@ pub fn interpret<'source>(
                 op_fn(&[interpret(expr, symbols)])
             }
         },
-        BinaryOp(_, left, op, right) => match *op {
+        BinaryOp(left, op, right) => match *op {
             "and" => {
                 let left_val = interpret(left, symbols);
                 if let Value::Bool(left_val) = left_val {
@@ -63,7 +63,7 @@ pub fn interpret<'source>(
                 }
             }
             "=" => {
-                if let Expression::Identifier(_, name) = **left {
+                if let Expression::Identifier(name) = left.expr {
                     let val = interpret(right, symbols);
                     *symbols.get(name) = val;
                     val
@@ -78,12 +78,12 @@ pub fn interpret<'source>(
                 op_fn(&[interpret(left, symbols), interpret(right, symbols)])
             }
         },
-        VarDeclaration(_, name, expr, _) => {
+        VarDeclaration(name, expr, _) => {
             let val = interpret(expr, symbols);
             symbols.insert(name, val);
             Value::None()
         }
-        Conditional(_, condition_expr, then_expr, else_expr) => {
+        Conditional(condition_expr, then_expr, else_expr) => {
             let Value::Bool(condition) = interpret(condition_expr, symbols) else {
                 panic!("Non-bool as if-then-else condition!");
             };
@@ -101,7 +101,7 @@ pub fn interpret<'source>(
                 Value::None()
             }
         }
-        While(_, condition, do_expr) => {
+        While(condition, do_expr) => {
             loop {
                 let condition = interpret(condition, symbols);
                 if let Value::Bool(cond) = condition {
@@ -116,7 +116,7 @@ pub fn interpret<'source>(
             }
             Value::None()
         }
-        FunCall(_, name, args) => {
+        FunCall(name, args) => {
             let mut arg_values = Vec::new();
             for arg in args {
                 arg_values.push(interpret(arg, symbols));
@@ -128,7 +128,7 @@ pub fn interpret<'source>(
 
             function(&arg_values)
         }
-        Block(_, expressions) => {
+        Block(expressions) => {
             symbols.push_level();
 
             let mut val = Value::None();

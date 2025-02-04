@@ -3,7 +3,7 @@ use crate::compiler::{token::CodeLocation, tokenizer::tokenize};
 
 macro_rules! bool_ast {
     ($x:expr) => {
-        BoolLiteral(CodeLocation::new(usize::MAX, usize::MAX), $x)
+        AstNode::new(CodeLocation::new(usize::MAX, usize::MAX), BoolLiteral($x))
     };
 }
 
@@ -15,7 +15,7 @@ macro_rules! bool_ast_b {
 
 macro_rules! int_ast {
     ($x:expr) => {
-        IntLiteral(CodeLocation::new(usize::MAX, usize::MAX), $x)
+        AstNode::new(CodeLocation::new(usize::MAX, usize::MAX), IntLiteral($x))
     };
 }
 
@@ -27,7 +27,7 @@ macro_rules! int_ast_b {
 
 macro_rules! id_ast {
     ($x:expr) => {
-        Identifier(CodeLocation::new(usize::MAX, usize::MAX), $x)
+        AstNode::new(CodeLocation::new(usize::MAX, usize::MAX), Identifier($x))
     };
 }
 
@@ -39,7 +39,7 @@ macro_rules! id_ast_b {
 
 macro_rules! un_ast {
     ($x:expr, $y:expr) => {
-        UnaryOp(CodeLocation::new(usize::MAX, usize::MAX), $x, $y)
+        AstNode::new(CodeLocation::new(usize::MAX, usize::MAX), UnaryOp($x, $y))
     };
 }
 
@@ -51,7 +51,10 @@ macro_rules! un_ast_b {
 
 macro_rules! bin_ast {
     ($x:expr, $y:expr, $z:expr) => {
-        BinaryOp(CodeLocation::new(usize::MAX, usize::MAX), $x, $y, $z)
+        AstNode::new(
+            CodeLocation::new(usize::MAX, usize::MAX),
+            BinaryOp($x, $y, $z),
+        )
     };
 }
 
@@ -63,7 +66,10 @@ macro_rules! bin_ast_b {
 
 macro_rules! con_ast {
     ($x:expr, $y:expr, $z:expr) => {
-        Conditional(CodeLocation::new(usize::MAX, usize::MAX), $x, $y, $z)
+        AstNode::new(
+            CodeLocation::new(usize::MAX, usize::MAX),
+            Conditional($x, $y, $z),
+        )
     };
 }
 
@@ -75,7 +81,7 @@ macro_rules! con_ast_b {
 
 macro_rules! fun_ast {
     ($x:expr, $y:expr) => {
-        FunCall(CodeLocation::new(usize::MAX, usize::MAX), $x, $y)
+        AstNode::new(CodeLocation::new(usize::MAX, usize::MAX), FunCall($x, $y))
     };
 }
 
@@ -87,7 +93,7 @@ macro_rules! fun_ast_b {
 
 macro_rules! block_ast {
     ($x:expr) => {
-        Block(CodeLocation::new(usize::MAX, usize::MAX), $x)
+        AstNode::new(CodeLocation::new(usize::MAX, usize::MAX), Block($x))
     };
 }
 
@@ -99,19 +105,22 @@ macro_rules! block_ast_b {
 
 macro_rules! empty_ast {
     () => {
-        EmptyLiteral(CodeLocation::new(usize::MAX, usize::MAX))
+        AstNode::new(CodeLocation::new(usize::MAX, usize::MAX), EmptyLiteral())
     };
 }
 
 macro_rules! var_ast {
     ($x:expr, $y:expr, $z:expr) => {
-        VarDeclaration(CodeLocation::new(usize::MAX, usize::MAX), $x, $y, $z)
+        AstNode::new(
+            CodeLocation::new(usize::MAX, usize::MAX),
+            VarDeclaration($x, $y, $z),
+        )
     };
 }
 
 macro_rules! while_ast {
     ($x:expr, $y:expr) => {
-        While(CodeLocation::new(usize::MAX, usize::MAX), $x, $y)
+        AstNode::new(CodeLocation::new(usize::MAX, usize::MAX), While($x, $y))
     };
 }
 
@@ -124,7 +133,7 @@ macro_rules! while_ast_b {
 #[test]
 #[should_panic]
 fn test_empty() {
-    parse(&vec![]);
+    parse(&[]);
 }
 
 #[test]

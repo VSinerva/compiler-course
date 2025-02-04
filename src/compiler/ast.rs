@@ -1,4 +1,5 @@
 use crate::compiler::token::CodeLocation;
+use crate::compiler::variable::Type;
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
@@ -8,56 +9,54 @@ pub enum TypeExpression {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct AstNode<'source> {
+    pub loc: CodeLocation,
+    pub node_type: Type,
+    pub expr: Expression<'source>,
+}
+
+impl<'source> AstNode<'source> {
+    pub fn new(loc: CodeLocation, expr: Expression<'source>) -> AstNode<'source> {
+        AstNode {
+            loc,
+            expr,
+            node_type: Type::Unit,
+        }
+    }
+}
+
+impl<'source> fmt::Display for AstNode<'source> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {} at {}",
+            self.expr.expr_type_str(),
+            self.expr.val_string(),
+            self.loc
+        )
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Expression<'source> {
-    EmptyLiteral(CodeLocation),
-    IntLiteral(CodeLocation, i64),
-    BoolLiteral(CodeLocation, bool),
-    Identifier(CodeLocation, &'source str),
-    UnaryOp(CodeLocation, &'source str, Box<Expression<'source>>),
-    BinaryOp(
-        CodeLocation,
-        Box<Expression<'source>>,
-        &'source str,
-        Box<Expression<'source>>,
-    ),
-    VarDeclaration(
-        CodeLocation,
-        &'source str,
-        Box<Expression<'source>>,
-        Option<TypeExpression>,
-    ),
+    EmptyLiteral(),
+    IntLiteral(i64),
+    BoolLiteral(bool),
+    Identifier(&'source str),
+    UnaryOp(&'source str, Box<AstNode<'source>>),
+    BinaryOp(Box<AstNode<'source>>, &'source str, Box<AstNode<'source>>),
+    VarDeclaration(&'source str, Box<AstNode<'source>>, Option<TypeExpression>),
     Conditional(
-        CodeLocation,
-        Box<Expression<'source>>,
-        Box<Expression<'source>>,
-        Option<Box<Expression<'source>>>,
+        Box<AstNode<'source>>,
+        Box<AstNode<'source>>,
+        Option<Box<AstNode<'source>>>,
     ),
-    While(
-        CodeLocation,
-        Box<Expression<'source>>,
-        Box<Expression<'source>>,
-    ),
-    FunCall(CodeLocation, &'source str, Vec<Expression<'source>>),
-    Block(CodeLocation, Vec<Expression<'source>>),
+    While(Box<AstNode<'source>>, Box<AstNode<'source>>),
+    FunCall(&'source str, Vec<AstNode<'source>>),
+    Block(Vec<AstNode<'source>>),
 }
 
 impl<'source> Expression<'source> {
-    pub fn loc(&self) -> CodeLocation {
-        match self {
-            Expression::EmptyLiteral(loc) => *loc,
-            Expression::IntLiteral(loc, _) => *loc,
-            Expression::BoolLiteral(loc, _) => *loc,
-            Expression::Identifier(loc, _) => *loc,
-            Expression::UnaryOp(loc, _, _) => *loc,
-            Expression::VarDeclaration(loc, _, _, _) => *loc,
-            Expression::BinaryOp(loc, _, _, _) => *loc,
-            Expression::Conditional(loc, _, _, _) => *loc,
-            Expression::While(loc, _, _) => *loc,
-            Expression::FunCall(loc, _, _) => *loc,
-            Expression::Block(loc, _) => *loc,
-        }
-    }
-
     fn expr_type_str(&self) -> &str {
         match self {
             Expression::EmptyLiteral(..) => "Empty literal",
@@ -68,7 +67,7 @@ impl<'source> Expression<'source> {
             Expression::VarDeclaration(..) => "Variable declaration",
             Expression::BinaryOp(..) => "Binary operation",
             Expression::Conditional(..) => "Conditional",
-            Expression::While(_, _, _) => "While loop",
+            Expression::While(..) => "While loop",
             Expression::FunCall(..) => "Function call",
             Expression::Block(..) => "Block",
         }
@@ -77,28 +76,16 @@ impl<'source> Expression<'source> {
     fn val_string(&self) -> String {
         match self {
             Expression::EmptyLiteral(..) => "".to_string(),
-            Expression::IntLiteral(_, val) => val.to_string(),
-            Expression::BoolLiteral(_, val) => val.to_string(),
-            Expression::Identifier(_, name) => name.to_string(),
-            Expression::UnaryOp(_, op, _) => op.to_string(),
-            Expression::VarDeclaration(_, name, _, _) => name.to_string(),
-            Expression::BinaryOp(_, _, op, _) => op.to_string(),
-            Expression::Conditional(_, condition, _, _) => format!("if {}", condition),
-            Expression::While(_, condition, _) => format!("while {}", condition),
-            Expression::FunCall(_, name, args) => format!("{} with {} args", name, args.len()),
-            Expression::Block(_, expressions) => format!("with {} expressions", expressions.len()),
+            Expression::IntLiteral(val) => val.to_string(),
+            Expression::BoolLiteral(val) => val.to_string(),
+            Expression::Identifier(name) => name.to_string(),
+            Expression::UnaryOp(op, _) => op.to_string(),
+            Expression::VarDeclaration(name, _, _) => name.to_string(),
+            Expression::BinaryOp(_, op, _) => op.to_string(),
+            Expression::Conditional(condition, _, _) => format!("if {:?}", condition),
+            Expression::While(condition, _) => format!("while {:?}", condition),
+            Expression::FunCall(name, args) => format!("{} with {} args", name, args.len()),
+            Expression::Block(expressions) => format!("with {} expressions", expressions.len()),
         }
-    }
-}
-
-impl<'source> fmt::Display for Expression<'source> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} {} at {}",
-            self.expr_type_str(),
-            self.val_string(),
-            self.loc()
-        )
     }
 }
