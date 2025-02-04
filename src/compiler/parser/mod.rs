@@ -3,7 +3,10 @@ mod parser_utilities;
 mod tests;
 
 use crate::compiler::{
-    ast::Expression::{self, *},
+    ast::{
+        Expression::{self, *},
+        TypeExpression::{self},
+    },
     parser::parser_utilities::*,
     token::{Token, TokenType},
 };
@@ -162,9 +165,22 @@ fn parse_var_declaration<'source>(
 ) -> Expression<'source> {
     consume_string(pos, tokens, "var");
     let name_token = consume_type(pos, tokens, TokenType::Identifier);
+
+    let mut type_expr = None;
+    if peek(pos, tokens).text == ":" {
+        consume_string(pos, tokens, ":");
+
+        let type_token = consume_type(pos, tokens, TokenType::Identifier);
+        type_expr = match type_token.text {
+            "Int" => Some(TypeExpression::Int(type_token.loc)),
+            "Bool" => Some(TypeExpression::Bool(type_token.loc)),
+            _ => panic! {"Unknown type indicator!"},
+        }
+    }
+
     consume_string(pos, tokens, "=");
     let value = parse_expression(0, pos, tokens);
-    VarDeclaration(name_token.loc, name_token.text, Box::new(value))
+    VarDeclaration(name_token.loc, name_token.text, Box::new(value), type_expr)
 }
 
 fn parse_conditional<'source>(pos: &mut usize, tokens: &[Token<'source>]) -> Expression<'source> {

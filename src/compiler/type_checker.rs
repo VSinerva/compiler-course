@@ -1,5 +1,8 @@
 use crate::compiler::{
-    ast::Expression::{self, *},
+    ast::{
+        Expression::{self, *},
+        TypeExpression,
+    },
     symtab::SymTab,
     variable::Type,
 };
@@ -84,8 +87,23 @@ pub fn type_check<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sour
                 (**sig_ret_type).clone()
             }
         },
-        VarDeclaration(_, name, expr) => {
+        VarDeclaration(_, name, expr, type_expr) => {
             let type_var = type_check(expr, symbols);
+
+            if let Some(type_expr) = type_expr {
+                let expected_type = match type_expr {
+                    TypeExpression::Int(_) => Type::Int,
+                    TypeExpression::Bool(_) => Type::Bool,
+                };
+
+                if type_var != expected_type {
+                    panic!(
+                        "Expected type {:?} does not match actual type {:?} in var declaration",
+                        expected_type, type_var
+                    )
+                }
+            }
+
             symbols.insert(name, type_var);
             Type::Unit
         }

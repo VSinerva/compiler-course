@@ -104,8 +104,8 @@ macro_rules! empty_ast {
 }
 
 macro_rules! var_ast {
-    ($x:expr, $y:expr) => {
-        VarDeclaration(CodeLocation::new(usize::MAX, usize::MAX), $x, $y)
+    ($x:expr, $y:expr, $z:expr) => {
+        VarDeclaration(CodeLocation::new(usize::MAX, usize::MAX), $x, $y, $z)
     };
 }
 
@@ -525,16 +525,45 @@ fn test_block_missing_semicolon() {
 #[test]
 fn test_var_basic() {
     let result = parse(&tokenize("var x = 1"));
-    assert_eq!(result, var_ast!("x", int_ast_b!(1)));
+    assert_eq!(result, var_ast!("x", int_ast_b!(1), None));
 
     let result = parse(&tokenize("{ var x = 1; x = 2; }"));
     assert_eq!(
         result,
         block_ast!(vec![
-            var_ast!("x", int_ast_b!(1)),
+            var_ast!("x", int_ast_b!(1), None),
             bin_ast!(id_ast_b!("x"), "=", int_ast_b!(2)),
             empty_ast!()
         ])
+    );
+}
+
+#[test]
+fn test_var_typed() {
+    let result = parse(&tokenize("var x: Int = 1"));
+    assert_eq!(
+        result,
+        var_ast!(
+            "x",
+            int_ast_b!(1),
+            Some(TypeExpression::Int(CodeLocation::new(
+                usize::MAX,
+                usize::MAX
+            )))
+        )
+    );
+
+    let result = parse(&tokenize("var x: Bool = true"));
+    assert_eq!(
+        result,
+        var_ast!(
+            "x",
+            bool_ast_b!(true),
+            Some(TypeExpression::Bool(CodeLocation::new(
+                usize::MAX,
+                usize::MAX
+            )))
+        )
     );
 }
 

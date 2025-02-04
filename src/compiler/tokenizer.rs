@@ -11,7 +11,7 @@ pub fn tokenize(code: &str) -> Vec<Token> {
             TokenType::Operator,
             Regex::new(r"^(==|!=|<=|>=|=|<|>|\+|-|\*|/|\%)").unwrap(),
         ),
-        (TokenType::Punctuation, Regex::new(r"^[\(\){},;]").unwrap()),
+        (TokenType::Punctuation, Regex::new(r"^[\(\){},;:]").unwrap()),
         (TokenType::Integer, Regex::new(r"^[0-9]+").unwrap()),
         (
             TokenType::Identifier,
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn test_tokenize_punctuation_basic() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("{var = (1 + 2, 3);}");
+        let result = tokenize("{var = (1 + 2, 3);:}");
 
         use TokenType::*;
         assert_eq!(
@@ -194,6 +194,7 @@ mod tests {
                 Token::new("3", Integer, loc),
                 Token::new(")", Punctuation, loc),
                 Token::new(";", Punctuation, loc),
+                Token::new(":", Punctuation, loc),
                 Token::new("}", Punctuation, loc),
             )
         );

@@ -78,7 +78,7 @@ pub fn interpret<'source>(
                 op_fn(&[interpret(left, symbols), interpret(right, symbols)])
             }
         },
-        VarDeclaration(_, name, expr) => {
+        VarDeclaration(_, name, expr, _) => {
             let val = interpret(expr, symbols);
             symbols.insert(name, val);
             Value::None()
