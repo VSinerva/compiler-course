@@ -12,7 +12,7 @@ mod symtab;
 mod token;
 mod tokenizer;
 //mod type_checker;
-mod value;
+mod variable;
 
 pub fn compile(code: &str) {
     let tokens = tokenizer::tokenize(code);

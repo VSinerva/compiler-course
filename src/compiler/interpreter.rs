@@ -1,7 +1,7 @@
 use crate::compiler::{
     ast::Expression::{self, *},
     symtab::SymTab,
-    value::Value,
+    variable::Value,
 };
 
 pub fn interpret<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'source>) -> Value {
