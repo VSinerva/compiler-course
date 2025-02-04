@@ -1,41 +1,19 @@
-use crate::compiler::variable::Value;
+use crate::compiler::variable::{Type, Value};
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct SymTab<'source> {
-    tables: Vec<HashMap<&'source str, Value>>,
+pub struct SymTab<'source, T> {
+    tables: Vec<HashMap<&'source str, T>>,
 }
 
-impl<'source> SymTab<'source> {
-    pub fn get(&mut self, symbol: &str) -> &mut Value {
+impl<'source, T> SymTab<'source, T> {
+    pub fn get(&mut self, symbol: &str) -> &mut T {
         for i in (0..self.tables.len()).rev() {
             if self.tables[i].contains_key(symbol) {
                 return self.tables[i].get_mut(symbol).unwrap();
             }
         }
         panic!("No symbol {} found!", symbol);
-    }
-
-    pub fn new() -> SymTab<'source> {
-        let globals = HashMap::from([
-            ("+", Value::Func(Value::add)),
-            ("*", Value::Func(Value::mul)),
-            ("-", Value::Func(Value::sub)),
-            ("/", Value::Func(Value::div)),
-            ("%", Value::Func(Value::rem)),
-            ("==", Value::Func(Value::eq)),
-            ("!=", Value::Func(Value::neq)),
-            ("<", Value::Func(Value::lt)),
-            ("<=", Value::Func(Value::le)),
-            (">", Value::Func(Value::gt)),
-            (">=", Value::Func(Value::ge)),
-            ("not", Value::Func(Value::not)),
-            ("neg", Value::Func(Value::neg)),
-        ]);
-
-        SymTab {
-            tables: vec![globals],
-        }
     }
 
     pub fn push_level(&mut self) {
@@ -46,7 +24,7 @@ impl<'source> SymTab<'source> {
         self.tables.pop();
     }
 
-    pub fn insert(&mut self, name: &'source str, val: Value) {
+    pub fn insert(&mut self, name: &'source str, val: T) {
         if self
             .tables
             .last_mut()
@@ -55,6 +33,54 @@ impl<'source> SymTab<'source> {
             .is_some()
         {
             panic!("Variable {} already defined in this scope!", name)
+        }
+    }
+}
+
+impl<'source> SymTab<'source, Type> {
+    pub fn new_type_table() -> SymTab<'source, Type> {
+        use Type::*;
+        let globals = HashMap::from([
+            ("+", Func(vec![Int, Int], Box::new(Int))),
+            ("*", Func(vec![Int, Int], Box::new(Int))),
+            ("-", Func(vec![Int, Int], Box::new(Int))),
+            ("/", Func(vec![Int, Int], Box::new(Int))),
+            ("%", Func(vec![Int, Int], Box::new(Int))),
+            ("<", Func(vec![Int, Int], Box::new(Bool))),
+            ("<=", Func(vec![Int, Int], Box::new(Bool))),
+            (">", Func(vec![Int, Int], Box::new(Bool))),
+            (">=", Func(vec![Int, Int], Box::new(Bool))),
+            ("not", Func(vec![Bool], Box::new(Bool))),
+            ("neg", Func(vec![Bool], Box::new(Bool))),
+        ]);
+
+        SymTab {
+            tables: vec![globals],
+        }
+    }
+}
+
+impl<'source> SymTab<'source, Value> {
+    pub fn new_val_table() -> SymTab<'source, Value> {
+        use Value::*;
+        let globals = HashMap::from([
+            ("+", Func(Value::add)),
+            ("*", Func(Value::mul)),
+            ("-", Func(Value::sub)),
+            ("/", Func(Value::div)),
+            ("%", Func(Value::rem)),
+            ("==", Func(Value::eq)),
+            ("!=", Func(Value::neq)),
+            ("<", Func(Value::lt)),
+            ("<=", Func(Value::le)),
+            (">", Func(Value::gt)),
+            (">=", Func(Value::ge)),
+            ("not", Func(Value::not)),
+            ("neg", Func(Value::neg)),
+        ]);
+
+        SymTab {
+            tables: vec![globals],
         }
     }
 }

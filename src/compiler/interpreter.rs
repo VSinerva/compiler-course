@@ -4,7 +4,10 @@ use crate::compiler::{
     variable::Value,
 };
 
-pub fn interpret<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'source>) -> Value {
+pub fn interpret<'source>(
+    ast: &Expression<'source>,
+    symbols: &mut SymTab<'source, Value>,
+) -> Value {
     match ast {
         EmptyLiteral(_) => Value::None(),
         IntLiteral(_, val) => Value::Int(*val),

@@ -1,5 +1,13 @@
 use std::fmt;
 
+#[derive(PartialEq, Debug)]
+pub enum Type {
+    Int,
+    Bool,
+    Func(Vec<Type>, Box<Type>),
+    Unit,
+}
+
 #[derive(PartialEq, PartialOrd, Debug, Copy, Clone)]
 pub enum Value {
     Int(i64),
