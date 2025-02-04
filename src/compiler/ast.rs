@@ -2,13 +2,13 @@ use crate::compiler::token::CodeLocation;
 use crate::compiler::variable::Type;
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TypeExpression {
     Int(CodeLocation),
     Bool(CodeLocation),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct AstNode<'source> {
     pub loc: CodeLocation,
     pub node_type: Type,
@@ -37,7 +37,7 @@ impl<'source> fmt::Display for AstNode<'source> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression<'source> {
     EmptyLiteral(),
     IntLiteral(i64),

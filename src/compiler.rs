@@ -17,8 +17,8 @@ mod variable;
 
 pub fn compile(code: &str) {
     let tokens = tokenize(code);
-    let ast = parse(&tokens);
-    type_check(&ast, &mut SymTab::new_type_table());
+    let mut ast = parse(&tokens);
+    type_check(&mut ast, &mut SymTab::new_type_table());
 }
 
 pub fn start_interpreter() {
