@@ -81,16 +81,21 @@ pub fn interpret<'source>(ast: &Expression<'source>, symbols: &mut SymTab<'sourc
             Value::None()
         }
         Conditional(_, condition_expr, then_expr, else_expr) => {
-            if let Value::Bool(condition) = interpret(condition_expr, symbols) {
+            let Value::Bool(condition) = interpret(condition_expr, symbols) else {
+                panic!("Non-bool as if-then-else condition!");
+            };
+
+            if let Some(else_expr) = else_expr {
                 if condition {
                     interpret(then_expr, symbols)
-                } else if let Some(expr) = else_expr {
-                    interpret(expr, symbols)
                 } else {
-                    Value::None()
+                    interpret(else_expr, symbols)
                 }
             } else {
-                panic!("Non-bool as if-then-else condition!");
+                if condition {
+                    interpret(then_expr, symbols);
+                }
+                Value::None()
             }
         }
         While(_, condition, do_expr) => {
