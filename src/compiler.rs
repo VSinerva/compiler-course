@@ -1,7 +1,8 @@
 use std::io;
 
-use interpreter::Interpreter;
+use interpreter::interpret;
 use parser::parse;
+use symtab::SymTab;
 use tokenizer::tokenize;
 
 mod ast;
@@ -10,6 +11,7 @@ mod parser;
 mod symtab;
 mod token;
 mod tokenizer;
+//mod type_checker;
 mod value;
 
 pub fn compile(code: &str) {
@@ -25,8 +27,7 @@ pub fn start_interpreter() {
             let tokens = tokenize(&code);
             let ast = parse(&tokens);
 
-            let mut interpreter = Interpreter::new();
-            let val = interpreter.interpret(&ast);
+            let val = interpret(&ast, &mut SymTab::new());
             println!("{}", val);
         }
     }
