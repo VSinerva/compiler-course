@@ -89,10 +89,10 @@ fn add_label(
     IrInstruction::new(loc, instruction)
 }
 
-fn visit_ast_node(
-    ast: &AstNode,
+fn visit_ast_node<'source>(
+    ast: &AstNode<'source>,
     types: &mut HashMap<IrVar, Type>,
-    symbols: &mut SymTab<IrVar>,
+    symbols: &mut SymTab<'source, IrVar>,
     instructions: &mut Vec<IrInstruction>,
     labels: &mut HashSet<IrInstructionType>,
 ) -> IrVar {
@@ -142,9 +142,10 @@ fn visit_ast_node(
                 result_var
             }
         },
-        VarDeclaration(_, expr, _) => {
+        VarDeclaration(name, expr, _) => {
             let expr_var = visit_ast_node(expr, types, symbols, instructions, labels);
             let result_var = add_var(&expr.node_type, types);
+            symbols.insert(name, result_var.clone());
             instructions.push(IrInstruction::new(expr.loc, Copy(expr_var, result_var)));
             symbols.get("unit").clone()
         }
@@ -201,12 +202,29 @@ fn visit_ast_node(
                 symbols.get("unit").clone()
             }
         },
-        While(_, _) => todo!(),
+        While(condition_expr, do_expr) => {
+            let l_start = add_label("while_start", condition_expr.loc, labels);
+            let l_body = add_label("while_body", do_expr.loc, labels);
+            let l_end = add_label("while_end", do_expr.loc, labels);
+
+            instructions.push(l_start.clone());
+            let cond_var = visit_ast_node(condition_expr, types, symbols, instructions, labels);
+            instructions.push(IrInstruction::new(
+                condition_expr.loc,
+                CondJump(cond_var, Box::new(l_body.clone()), Box::new(l_end.clone())),
+            ));
+            instructions.push(l_body);
+            visit_ast_node(do_expr, types, symbols, instructions, labels);
+            instructions.push(IrInstruction::new(do_expr.loc, Jump(Box::new(l_start))));
+            instructions.push(l_end);
+
+            symbols.get("unit").clone()
+        }
         FunCall(_, _) => todo!(),
         Block(expressions) => {
             let mut result_var = symbols.get("unit").clone();
             for expression in expressions {
-                result_var = visit_ast_node(expression, types, symbols, instructions, labels)
+                result_var = visit_ast_node(expression, types, symbols, instructions, labels);
             }
             result_var
         }
