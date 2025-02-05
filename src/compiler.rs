@@ -32,6 +32,7 @@ pub fn start_compiler() {
         for instruction in compile(&line) {
             println!("{instruction}");
         }
+        println!();
     }
 }
 

@@ -19,40 +19,23 @@ fn get_type<'source>(ast: &mut AstNode<'source>, symbols: &mut SymTab<'source, T
         IntLiteral(_) => Type::Int,
         BoolLiteral(_) => Type::Bool,
         Identifier(name) => symbols.get(name).clone(),
-        UnaryOp(op, mut expr) => match op {
-            "-" => {
-                let expr_types = vec![type_check(&mut expr, symbols)];
+        UnaryOp(op, mut expr) => {
+            let expr_types = vec![type_check(&mut expr, symbols)];
 
-                let Type::Func(sig_arg_types, sig_ret_type) = symbols.get("neg") else {
-                    panic!("Identifier {} does not correspond to an operator!", op);
-                };
+            let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(&format!("unary_{op}"))
+            else {
+                panic!("Identifier {} does not correspond to an operator!", op);
+            };
 
-                if expr_types != *sig_arg_types {
-                    panic!(
-                        "Operator {} argument types {:?} don't match expected {:?}",
-                        op, expr_types, *sig_arg_types
-                    );
-                }
-
-                (**sig_ret_type).clone()
+            if expr_types != *sig_arg_types {
+                panic!(
+                    "Operator {} argument types {:?} don't match expected {:?}",
+                    op, expr_types, *sig_arg_types
+                );
             }
-            _ => {
-                let expr_types = vec![type_check(&mut expr, symbols)];
 
-                let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(op) else {
-                    panic!("Identifier {} does not correspond to an operator!", op);
-                };
-
-                if expr_types != *sig_arg_types {
-                    panic!(
-                        "Operator {} argument types {:?} don't match expected {:?}",
-                        op, expr_types, *sig_arg_types
-                    );
-                }
-
-                (**sig_ret_type).clone()
-            }
-        },
+            (**sig_ret_type).clone()
+        }
         BinaryOp(mut left, op, mut right) => match op {
             "==" | "!=" => {
                 let left_type = type_check(&mut left, symbols);

@@ -13,20 +13,12 @@ pub fn interpret<'source>(ast: &AstNode<'source>, symbols: &mut SymTab<'source, 
         IntLiteral(val) => Value::Int(*val),
         BoolLiteral(val) => Value::Bool(*val),
         Identifier(name) => *symbols.get(name),
-        UnaryOp(op, expr) => match *op {
-            "-" => {
-                let Value::Func(op_fn) = symbols.get("neg") else {
-                    panic!("Operator {} does not correspond to a function!", op);
-                };
-                op_fn(&[interpret(expr, symbols)])
-            }
-            _ => {
-                let Value::Func(op_fn) = symbols.get(op) else {
-                    panic!("Operator {} does not correspond to a function!", op);
-                };
-                op_fn(&[interpret(expr, symbols)])
-            }
-        },
+        UnaryOp(op, expr) => {
+            let Value::Func(op_fn) = symbols.get(&format!("unary_{op}")) else {
+                panic!("Operator {} does not correspond to a function!", op);
+            };
+            op_fn(&[interpret(expr, symbols)])
+        }
         BinaryOp(left, op, right) => match *op {
             "and" => {
                 let left_val = interpret(left, symbols);

@@ -58,8 +58,8 @@ impl<'source> SymTab<'source, Type> {
             ("<=", Func(vec![Int, Int], Box::new(Bool))),
             (">", Func(vec![Int, Int], Box::new(Bool))),
             (">=", Func(vec![Int, Int], Box::new(Bool))),
-            ("not", Func(vec![Bool], Box::new(Bool))),
-            ("neg", Func(vec![Int], Box::new(Int))),
+            ("unary_not", Func(vec![Bool], Box::new(Bool))),
+            ("unary_-", Func(vec![Int], Box::new(Int))),
             ("or", Func(vec![Bool, Bool], Box::new(Bool))),
             ("and", Func(vec![Bool, Bool], Box::new(Bool))),
         ]);
@@ -85,8 +85,8 @@ impl<'source> SymTab<'source, Value> {
             ("<=", Func(Value::le)),
             (">", Func(Value::gt)),
             (">=", Func(Value::ge)),
-            ("not", Func(Value::not)),
-            ("neg", Func(Value::neg)),
+            ("unary_not", Func(Value::not)),
+            ("unary_-", Func(Value::neg)),
         ]);
 
         SymTab {
