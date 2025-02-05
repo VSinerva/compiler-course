@@ -122,8 +122,8 @@ fn get_type<'source>(ast: &mut AstNode<'source>, symbols: &mut SymTab<'source, T
         }
         FunCall(name, args) => {
             let mut arg_types = Vec::new();
-            for mut arg in args {
-                arg_types.push(type_check(&mut arg, symbols));
+            for arg in args {
+                arg_types.push(type_check(arg, symbols));
             }
 
             let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(name) else {

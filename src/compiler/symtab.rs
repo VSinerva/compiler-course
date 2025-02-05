@@ -49,6 +49,9 @@ impl<'source> SymTab<'source, Type> {
     pub fn new_type_table() -> SymTab<'source, Type> {
         use Type::*;
         let globals = HashMap::from([
+            ("print_bool", Func(vec![Bool], Box::new(Unit))),
+            ("print_int", Func(vec![Int], Box::new(Unit))),
+            ("read_int", Func(vec![], Box::new(Int))),
             ("+", Func(vec![Int, Int], Box::new(Int))),
             ("*", Func(vec![Int, Int], Box::new(Int))),
             ("-", Func(vec![Int, Int], Box::new(Int))),

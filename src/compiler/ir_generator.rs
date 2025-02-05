@@ -220,7 +220,31 @@ fn visit_ast_node<'source>(
 
             symbols.get("unit").clone()
         }
-        FunCall(_, _) => todo!(),
+        FunCall(name, expressions) => {
+            let fn_var = symbols.get(name).clone();
+            let Type::Func(_, result_type) = types.get(&fn_var).unwrap().clone() else {
+                panic!("Function call does not have entry in types table!");
+            };
+
+            let mut args = Vec::new();
+            for expression in expressions {
+                args.push(visit_ast_node(
+                    expression,
+                    types,
+                    symbols,
+                    instructions,
+                    labels,
+                ));
+            }
+            let result_var = add_var(&result_type, types);
+
+            instructions.push(IrInstruction::new(
+                ast.loc,
+                Call(fn_var, args, result_var.clone()),
+            ));
+
+            result_var
+        }
         Block(expressions) => {
             let mut result_var = symbols.get("unit").clone();
             for expression in expressions {
