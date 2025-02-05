@@ -1,6 +1,7 @@
 use std::fmt;
 
-#[derive(Debug, Copy, Clone)]
+#[allow(clippy::derived_hash_with_manual_eq)]
+#[derive(Debug, Copy, Clone, Eq, Hash)]
 pub struct CodeLocation {
     line: usize,
     char: usize,

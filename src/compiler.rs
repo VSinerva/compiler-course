@@ -29,6 +29,7 @@ pub fn compile(code: &str) -> Vec<IrInstruction> {
 pub fn start_compiler() {
     let lines = io::stdin().lines();
     for line in lines.map_while(Result::ok) {
+        println!();
         for instruction in compile(&line) {
             println!("{instruction}");
         }

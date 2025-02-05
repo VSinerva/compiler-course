@@ -52,11 +52,11 @@ impl IrVar {
 
 impl fmt::Display for IrInstruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}           # From {}", self.instruction, self.loc)
+        write!(f, "{}", self.instruction)
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub struct IrInstruction {
     pub loc: CodeLocation,
     pub instruction: IrInstructionType,
@@ -68,7 +68,7 @@ impl IrInstruction {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub enum IrInstructionType {
     LoadBoolConst(bool, IrVar),
     LoadIntConst(i64, IrVar),
