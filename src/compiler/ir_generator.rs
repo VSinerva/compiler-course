@@ -203,6 +203,12 @@ fn visit_ast_node(
         },
         While(_, _) => todo!(),
         FunCall(_, _) => todo!(),
-        Block(_) => todo!(),
+        Block(expressions) => {
+            let mut result_var = symbols.get("unit").clone();
+            for expression in expressions {
+                result_var = visit_ast_node(expression, types, symbols, instructions, labels)
+            }
+            result_var
+        }
     }
 }
