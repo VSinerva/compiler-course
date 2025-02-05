@@ -9,6 +9,8 @@ fn main() {
     if let Some(flag) = args.get(1) {
         if flag == "-i" {
             compiler::start_interpreter();
+        } else if flag == "-c" {
+            compiler::start_compiler();
         }
     } else {
         server::start("::".parse().unwrap(), 3000);

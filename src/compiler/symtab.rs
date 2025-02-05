@@ -37,6 +37,14 @@ impl<'source, T> SymTab<'source, T> {
     }
 }
 
+impl<'source, T> SymTab<'source, T> {
+    pub fn new() -> SymTab<'source, T> {
+        SymTab {
+            tables: vec![HashMap::new()],
+        }
+    }
+}
+
 impl<'source> SymTab<'source, Type> {
     pub fn new_type_table() -> SymTab<'source, Type> {
         use Type::*;
