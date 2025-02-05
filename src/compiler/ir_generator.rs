@@ -142,7 +142,12 @@ fn visit_ast_node(
                 result_var
             }
         },
-        VarDeclaration(_, _, _) => todo!(),
+        VarDeclaration(_, expr, _) => {
+            let expr_var = visit_ast_node(expr, types, symbols, instructions, labels);
+            let result_var = add_var(&expr.node_type, types);
+            instructions.push(IrInstruction::new(expr.loc, Copy(expr_var, result_var)));
+            symbols.get("unit").clone()
+        }
         Conditional(condition_expr, then_expr, else_expr) => match else_expr {
             Some(else_expr) => {
                 let l_then = add_label("then", then_expr.loc, labels);
