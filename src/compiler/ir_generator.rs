@@ -126,8 +126,74 @@ fn visit_ast_node<'source>(
         }
         BinaryOp(left, op, right) => match *op {
             "=" => todo!(),
-            "and" => todo!(),
-            "or" => todo!(),
+            "and" => {
+                let l_right = add_label("and_right", right.loc, labels);
+                let l_skip = add_label("and_skip", ast.loc, labels);
+                let l_end = add_label("and_end", ast.loc, labels);
+
+                let left_var = visit_ast_node(left, types, symbols, instructions, labels);
+                instructions.push(IrInstruction::new(
+                    left.loc,
+                    CondJump(
+                        left_var,
+                        Box::new(l_right.clone()),
+                        Box::new(l_skip.clone()),
+                    ),
+                ));
+
+                instructions.push(l_right);
+                let right_var = visit_ast_node(right, types, symbols, instructions, labels);
+                let result_var = add_var(&ast.node_type, types);
+                instructions.push(IrInstruction::new(
+                    right.loc,
+                    Copy(right_var, result_var.clone()),
+                ));
+                instructions.push(IrInstruction::new(right.loc, Jump(Box::new(l_end.clone()))));
+
+                instructions.push(l_skip);
+                instructions.push(IrInstruction::new(
+                    right.loc,
+                    LoadBoolConst(false, result_var.clone()),
+                ));
+                instructions.push(IrInstruction::new(right.loc, Jump(Box::new(l_end.clone()))));
+
+                instructions.push(l_end);
+                result_var
+            }
+            "or" => {
+                let l_right = add_label("or_right", right.loc, labels);
+                let l_skip = add_label("or_skip", ast.loc, labels);
+                let l_end = add_label("or_end", ast.loc, labels);
+
+                let left_var = visit_ast_node(left, types, symbols, instructions, labels);
+                instructions.push(IrInstruction::new(
+                    left.loc,
+                    CondJump(
+                        left_var,
+                        Box::new(l_skip.clone()),
+                        Box::new(l_right.clone()),
+                    ),
+                ));
+
+                instructions.push(l_right);
+                let right_var = visit_ast_node(right, types, symbols, instructions, labels);
+                let result_var = add_var(&ast.node_type, types);
+                instructions.push(IrInstruction::new(
+                    right.loc,
+                    Copy(right_var, result_var.clone()),
+                ));
+                instructions.push(IrInstruction::new(right.loc, Jump(Box::new(l_end.clone()))));
+
+                instructions.push(l_skip);
+                instructions.push(IrInstruction::new(
+                    right.loc,
+                    LoadBoolConst(true, result_var.clone()),
+                ));
+                instructions.push(IrInstruction::new(right.loc, Jump(Box::new(l_end.clone()))));
+
+                instructions.push(l_end);
+                result_var
+            }
             _ => {
                 let op_var = symbols.get(op).clone();
                 let left_var = visit_ast_node(left, types, symbols, instructions, labels);

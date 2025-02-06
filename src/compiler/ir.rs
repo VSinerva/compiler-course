@@ -90,7 +90,7 @@ impl fmt::Display for IrInstructionType {
             IrInstructionType::CondJump(cond, then_dest, else_dest) => {
                 format!("CondJump({cond}, {then_dest}, {else_dest})")
             }
-            IrInstructionType::Label(name) => format!("Label({name})"),
+            IrInstructionType::Label(name) => format!("\nLabel({name})"),
         };
 
         write!(f, "{}", string)
