@@ -125,7 +125,17 @@ fn visit_ast_node<'source>(
             result_var
         }
         BinaryOp(left, op, right) => match *op {
-            "=" => todo!(),
+            "=" => {
+                let right_var = visit_ast_node(right, types, symbols, instructions, labels);
+                let Identifier(var_name) = left.expr else {
+                    panic!("Tried to assign to non-variable!");
+                };
+                let var = symbols.get(var_name).clone();
+
+                instructions.push(IrInstruction::new(right.loc, Copy(right_var, var.clone())));
+
+                var
+            }
             "and" => {
                 let l_right = add_label("and_right", right.loc, labels);
                 let l_skip = add_label("and_skip", ast.loc, labels);
