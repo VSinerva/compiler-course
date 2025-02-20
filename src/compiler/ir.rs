@@ -42,6 +42,8 @@ impl IrVar {
             (IrVar::new("<="), Func(vec![Int, Int], Box::new(Bool))),
             (IrVar::new(">"), Func(vec![Int, Int], Box::new(Bool))),
             (IrVar::new(">="), Func(vec![Int, Int], Box::new(Bool))),
+            (IrVar::new("=="), Func(vec![Int, Int], Box::new(Bool))), // Arg types faked
+            (IrVar::new("!="), Func(vec![Int, Int], Box::new(Bool))), // Arg types faked
             (IrVar::new("unary_not"), Func(vec![Bool], Box::new(Bool))),
             (IrVar::new("unary_-"), Func(vec![Int], Box::new(Int))),
             (IrVar::new("or"), Func(vec![Bool, Bool], Box::new(Bool))),
