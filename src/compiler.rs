@@ -1,13 +1,14 @@
 use std::io;
 
+use assembly_generator::generate_assembly;
 use interpreter::interpret;
-use ir::IrInstruction;
 use ir_generator::generate_ir;
 use parser::parse;
 use symtab::SymTab;
 use tokenizer::tokenize;
 use type_checker::type_check;
 
+mod assembly_generator;
 mod ast;
 mod interpreter;
 mod ir;
@@ -19,20 +20,19 @@ mod tokenizer;
 mod type_checker;
 mod variable;
 
-pub fn compile(code: &str) -> Vec<IrInstruction> {
+pub fn compile(code: &str) -> String {
     let tokens = tokenize(code);
     let mut ast = parse(&tokens);
     type_check(&mut ast, &mut SymTab::new_type_table());
-    generate_ir(&ast)
+    let ir = generate_ir(&ast);
+    generate_assembly(&ir)
 }
 
 pub fn start_compiler() {
     let lines = io::stdin().lines();
     for line in lines.map_while(Result::ok) {
         println!();
-        for instruction in compile(&line) {
-            println!("{instruction}");
-        }
+        println!("{}", compile(&line));
         println!();
     }
 }

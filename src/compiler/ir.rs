@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt};
 
 use crate::compiler::{token::CodeLocation, variable::Type};
 
-#[derive(PartialEq, Clone, Eq, Hash)]
+#[derive(PartialEq, Clone, Eq, Hash, Ord, PartialOrd)]
 pub struct IrVar {
     pub name: String,
 }
@@ -68,6 +68,21 @@ impl IrInstruction {
     pub fn new(loc: CodeLocation, instruction: IrInstructionType) -> Self {
         Self { loc, instruction }
     }
+
+    pub fn get_vars(&self) -> Vec<IrVar> {
+        use IrInstructionType::*;
+        match &self.instruction {
+            LoadBoolConst(_, var) | LoadIntConst(_, var) | CondJump(var, _, _) => vec![var.clone()],
+            Copy(var1, var2) => vec![var1.clone(), var2.clone()],
+            Call(var1, var_vec, var2) => {
+                let mut var_vec = var_vec.clone();
+                var_vec.push(var1.clone());
+                var_vec.push(var2.clone());
+                var_vec
+            }
+            _ => vec![],
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Eq, Hash)]
@@ -92,7 +107,7 @@ impl fmt::Display for IrInstructionType {
             IrInstructionType::CondJump(cond, then_dest, else_dest) => {
                 format!("CondJump({cond}, {then_dest}, {else_dest})")
             }
-            IrInstructionType::Label(name) => format!("\nLabel({name})"),
+            IrInstructionType::Label(name) => format!("Label({name})"),
         };
 
         write!(f, "{}", string)
