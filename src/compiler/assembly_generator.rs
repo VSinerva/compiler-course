@@ -130,57 +130,85 @@ fn handle_intrinsics(
     arg_vec: &[IrVar],
     output_var: &IrVar,
 ) {
-    let out_reg = "%rax";
+    let res = "%rax";
     match &*op_var.name {
-        "+" => {
-            todo!();
-        }
-        "*" => {
-            todo!();
-        }
-        "-" => {
-            todo!();
-        }
-        "/" => {
-            todo!();
-        }
-        "%" => {
-            todo!();
-        }
-        "<" => {
-            todo!();
-        }
-        "<=" => {
-            todo!();
-        }
-        ">" => {
-            todo!();
-        }
-        ">=" => {
-            todo!();
-        }
-        "==" => {
-            todo!();
-        }
-        "!=" => {
-            todo!();
-        }
         "unary_not" => {
-            todo!();
+            let arg0 = locals.get_ref(&arg_vec[0]);
+            out.push_str(&format!("\tmovq {arg0}, {res}\n"));
+            out.push_str(&format!("\txorq $1, {res}\n"));
         }
         "unary_-" => {
-            out.push_str(&format!(
-                "\tmovq {}, {out_reg}\n",
-                locals.get_ref(&arg_vec[0])
-            ));
-            out.push_str(&format!("\tnegq {out_reg}\n"));
+            let arg0 = locals.get_ref(&arg_vec[0]);
+            out.push_str(&format!("\tmovq {arg0}, {res}\n"));
+            out.push_str(&format!("\tnegq {res}\n"));
         }
-        _ => panic!("Unknown intrinsic {op_var}!"),
+        _ => {
+            // Must be binary intrinsic
+            let arg0 = locals.get_ref(&arg_vec[0]);
+            let arg1 = locals.get_ref(&arg_vec[1]);
+            match &*op_var.name {
+                "+" => {
+                    if arg0 != res {
+                        out.push_str(&format!("\tmovq {arg0}, {res}\n"));
+                    }
+                    out.push_str(&format!("\taddq {arg1}, {res}\n"));
+                }
+                "*" => {
+                    if arg0 != res {
+                        out.push_str(&format!("\tmovq {arg0}, {res}\n"));
+                    }
+                    out.push_str(&format!("\timulq {arg1}, {res}\n"));
+                }
+                "-" => {
+                    if arg0 != res {
+                        out.push_str(&format!("\tmovq {arg0}, {res}\n"));
+                    }
+                    out.push_str(&format!("\tsubq {arg1}, {res}\n"));
+                }
+                "/" => {
+                    out.push_str(&format!("\tmovq {arg0}, %rax\n"));
+                    out.push_str("\tcqto\n");
+                    out.push_str(&format!("\tidivq {arg1}\n"));
+                    if res != "%rax " {
+                        out.push_str(&format!("\tmovq %rax, {res}\n"));
+                    }
+                }
+                "%" => {
+                    out.push_str(&format!("\tmovq {arg0}, %rax\n"));
+                    out.push_str("\tcqto\n");
+                    out.push_str(&format!("\tidivq {arg1}\n"));
+                    if res != "%rdx " {
+                        out.push_str(&format!("\tmovq %rdx, {res}\n"));
+                    }
+                }
+                _ => {
+                    let setcc_insn = match &*op_var.name {
+                        "<" => "setl",
+                        "<=" => "setle",
+                        ">" => "setg",
+                        ">=" => "setge",
+                        "==" => "sete",
+                        "!=" => "setne",
+                        _ => panic!("Unknown intrinsic {op_var}!"),
+                    };
+                    // We use 'al' below, which means the lower bytes of 'rax'
+
+                    // Clear all bits of rax
+                    out.push_str("\txor %rax, %rax\n");
+
+                    out.push_str(&format!("\tmovq {arg0}, %rdx\n"));
+                    out.push_str(&format!("\tcmpq {arg1}, %rdx\n"));
+
+                    // Set lowest byte of 'rax' to comparison result
+                    out.push_str(&format!("\t{setcc_insn} %al\n"));
+                    if res != "%rax" {
+                        out.push_str(&format!("\tmovq %rax, {res}\n"));
+                    }
+                }
+            }
+        }
     }
-    out.push_str(&format!(
-        "\tmovq {out_reg}, {}\n",
-        locals.get_ref(output_var)
-    ));
+    out.push_str(&format!("\tmovq {res}, {}\n", locals.get_ref(output_var)));
 }
 
 #[derive(Debug)]
