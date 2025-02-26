@@ -7,14 +7,17 @@ use crate::compiler::{
     variable::Value,
 };
 
+// Function was made as an exercise mid-way through the project and has been left mostly as-is
+// since!
+
 pub fn interpret<'source>(ast: &AstNode<'source>, symbols: &mut SymTab<'source, Value>) -> Value {
     match &ast.expr {
         EmptyLiteral() => Value::None(),
         IntLiteral(val) => Value::Int(*val),
         BoolLiteral(val) => Value::Bool(*val),
-        Identifier(name) => *symbols.get(name),
+        Identifier(name) => *symbols.get(name).unwrap(),
         UnaryOp(op, expr) => {
-            let Value::Func(op_fn) = symbols.get(&format!("unary_{op}")) else {
+            let Value::Func(op_fn) = symbols.get(&format!("unary_{op}")).unwrap() else {
                 panic!("Operator {} does not correspond to a function!", op);
             };
             op_fn(&[interpret(expr, symbols)])
@@ -57,14 +60,14 @@ pub fn interpret<'source>(ast: &AstNode<'source>, symbols: &mut SymTab<'source, 
             "=" => {
                 if let Expression::Identifier(name) = left.expr {
                     let val = interpret(right, symbols);
-                    *symbols.get(name) = val;
+                    *symbols.get(name).unwrap() = val;
                     val
                 } else {
                     panic!("Assignment must have identifier as left expr!");
                 }
             }
             _ => {
-                let Value::Func(op_fn) = symbols.get(op) else {
+                let Value::Func(op_fn) = symbols.get(op).unwrap() else {
                     panic!("Operator {} does not correspond to a function!", op);
                 };
                 op_fn(&[interpret(left, symbols), interpret(right, symbols)])
@@ -72,7 +75,7 @@ pub fn interpret<'source>(ast: &AstNode<'source>, symbols: &mut SymTab<'source, 
         },
         VarDeclaration(name, expr, _) => {
             let val = interpret(expr, symbols);
-            symbols.insert(name, val);
+            symbols.insert(name, val).unwrap();
             Value::None()
         }
         Conditional(condition_expr, then_expr, else_expr) => {
@@ -114,7 +117,7 @@ pub fn interpret<'source>(ast: &AstNode<'source>, symbols: &mut SymTab<'source, 
                 arg_values.push(interpret(arg, symbols));
             }
 
-            let Value::Func(function) = symbols.get(name) else {
+            let Value::Func(function) = symbols.get(name).unwrap() else {
                 panic!("Identifier {} does not correspond to a function!", name);
             };
 

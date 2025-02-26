@@ -1,83 +1,115 @@
+use std::{error::Error, fmt::Display};
+
 use crate::compiler::{
     ast::{AstNode, Expression::*, TypeExpression},
     symtab::SymTab,
     variable::Type,
 };
 
+#[derive(Debug)]
+pub struct TypeCheckerError {
+    msg: String,
+}
+
+impl Display for TypeCheckerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TypeCheckerError: {}", self.msg)
+    }
+}
+
+impl Error for TypeCheckerError {}
+
 pub fn type_check<'source>(
     ast: &mut AstNode<'source>,
     symbols: &mut SymTab<'source, Type>,
-) -> Type {
-    let node_type = get_type(ast, symbols);
+) -> Result<Type, Box<dyn Error>> {
+    let node_type = get_type(ast, symbols)?;
     ast.node_type = node_type.clone();
-    node_type
+    Ok(node_type)
 }
 
-fn get_type<'source>(ast: &mut AstNode<'source>, symbols: &mut SymTab<'source, Type>) -> Type {
+fn get_type<'source>(
+    ast: &mut AstNode<'source>,
+    symbols: &mut SymTab<'source, Type>,
+) -> Result<Type, Box<dyn Error>> {
     match &mut ast.expr {
-        EmptyLiteral() => Type::Unit,
-        IntLiteral(_) => Type::Int,
-        BoolLiteral(_) => Type::Bool,
-        Identifier(name) => symbols.get(name).clone(),
+        EmptyLiteral() => Ok(Type::Unit),
+        IntLiteral(_) => Ok(Type::Int),
+        BoolLiteral(_) => Ok(Type::Bool),
+        Identifier(name) => Ok(symbols.get(name)?.clone()),
         UnaryOp(op, ref mut expr) => {
-            let expr_types = vec![type_check(expr, symbols)];
+            let expr_types = vec![type_check(expr, symbols)?];
 
-            let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(&format!("unary_{op}"))
+            let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(&format!("unary_{op}"))?
             else {
-                panic!("Identifier {} does not correspond to an operator!", op);
+                return Err(Box::new(TypeCheckerError {
+                    msg: format!("Identifier {} does not correspond to an operator!", op),
+                }));
             };
 
             if expr_types != *sig_arg_types {
-                panic!(
-                    "Operator {} argument types {:?} don't match expected {:?}",
-                    op, expr_types, *sig_arg_types
-                );
+                return Err(Box::new(TypeCheckerError {
+                    msg: format!(
+                        "Operator {} argument types {:?} don't match expected {:?}",
+                        op, expr_types, *sig_arg_types
+                    ),
+                }));
             }
 
-            (**sig_ret_type).clone()
+            Ok((**sig_ret_type).clone())
         }
         BinaryOp(ref mut left, op, ref mut right) => match *op {
             "==" | "!=" => {
-                let left_type = type_check(left, symbols);
-                let right_type = type_check(right, symbols);
+                let left_type = type_check(left, symbols)?;
+                let right_type = type_check(right, symbols)?;
                 if left_type != right_type {
-                    panic!("Mismatched types being compared with {op}");
+                    return Err(Box::new(TypeCheckerError {
+                        msg: format!("Mismatched types being compared with {op}"),
+                    }));
                 }
-                Type::Bool
+                Ok(Type::Bool)
             }
             "=" => {
                 if !matches!(left.expr, Identifier(_)) {
-                    panic!("Non-variable on left side of assignment!");
+                    return Err(Box::new(TypeCheckerError {
+                        msg: String::from("Non-variable on left side of assignment!"),
+                    }));
                 }
 
-                let left_type = type_check(left, symbols);
-                let right_type = type_check(right, symbols);
+                let left_type = type_check(left, symbols)?;
+                let right_type = type_check(right, symbols)?;
                 if left_type != right_type {
-                    panic!("Mismatched types in assignment!");
+                    return Err(Box::new(TypeCheckerError {
+                        msg: String::from("Mismatched types in assignment!"),
+                    }));
                 }
-                left_type
+                Ok(left_type)
             }
             _ => {
-                let left_type = type_check(left, symbols);
-                let right_type = type_check(right, symbols);
+                let left_type = type_check(left, symbols)?;
+                let right_type = type_check(right, symbols)?;
                 let arg_types = vec![left_type, right_type];
 
-                let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(op) else {
-                    panic!("Identifier {} does not correspond to an operator!", op);
+                let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(op).unwrap() else {
+                    return Err(Box::new(TypeCheckerError {
+                        msg: format!("Identifier {} does not correspond to an operator!", op),
+                    }));
                 };
 
                 if arg_types != *sig_arg_types {
-                    panic!(
-                        "Operator {} argument types {:?} don't match expected {:?}",
-                        op, arg_types, *sig_arg_types
-                    );
+                    return Err(Box::new(TypeCheckerError {
+                        msg: format!(
+                            "Operator {} argument types {:?} don't match expected {:?}",
+                            op, arg_types, *sig_arg_types
+                        ),
+                    }));
                 }
 
-                (**sig_ret_type).clone()
+                Ok((**sig_ret_type).clone())
             }
         },
         VarDeclaration(name, ref mut expr, ref mut type_expr) => {
-            let type_var = type_check(expr, symbols);
+            let type_var = type_check(expr, symbols)?;
 
             if let Some(type_expr) = type_expr {
                 let expected_type = match type_expr {
@@ -86,69 +118,81 @@ fn get_type<'source>(ast: &mut AstNode<'source>, symbols: &mut SymTab<'source, T
                 };
 
                 if type_var != expected_type {
-                    panic!(
-                        "Expected type {:?} does not match actual type {:?} in var declaration",
-                        expected_type, type_var
-                    )
+                    return Err(Box::new(TypeCheckerError {
+                        msg: format!(
+                            "Expected type {:?} does not match actual type {:?} in var declaration",
+                            expected_type, type_var
+                        ),
+                    }));
                 }
             }
 
-            symbols.insert(name, type_var);
-            Type::Unit
+            symbols.insert(name, type_var)?;
+            Ok(Type::Unit)
         }
         Conditional(ref mut condition_expr, ref mut then_expr, ref mut else_expr) => {
-            if !matches!(type_check(condition_expr, symbols), Type::Bool) {
-                panic!("Non-bool as if-then-else condition!");
+            if !matches!(type_check(condition_expr, symbols)?, Type::Bool) {
+                return Err(Box::new(TypeCheckerError {
+                    msg: String::from("Non-bool as if-then-else condition!"),
+                }));
             }
 
             if let Some(ref mut else_expr) = else_expr {
-                let then_type = type_check(then_expr, symbols);
-                let else_type = type_check(else_expr, symbols);
+                let then_type = type_check(then_expr, symbols)?;
+                let else_type = type_check(else_expr, symbols)?;
                 if then_type == else_type {
-                    then_type
+                    Ok(then_type)
                 } else {
-                    panic!("Mismatched return values in if-then-else!");
+                    Err(Box::new(TypeCheckerError {
+                        msg: String::from("Mismatched return types in if-then-else!"),
+                    }))
                 }
             } else {
-                Type::Unit
+                Ok(Type::Unit)
             }
         }
         While(ref mut condition_expr, ref mut do_expr) => {
-            if !matches!(type_check(condition_expr, symbols), Type::Bool) {
-                panic!("Non-bool as while-do condition!");
+            if !matches!(type_check(condition_expr, symbols)?, Type::Bool) {
+                return Err(Box::new(TypeCheckerError {
+                    msg: String::from("Non-bool as while-do condition!"),
+                }));
             }
-            type_check(do_expr, symbols);
-            Type::Unit
+            type_check(do_expr, symbols)?;
+            Ok(Type::Unit)
         }
         FunCall(name, args) => {
             let mut arg_types = Vec::new();
             for arg in args {
-                arg_types.push(type_check(arg, symbols));
+                arg_types.push(type_check(arg, symbols)?);
             }
 
-            let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(name) else {
-                panic!("Identifier {} does not correspond to a function!", name);
+            let Type::Func(sig_arg_types, sig_ret_type) = symbols.get(name).unwrap() else {
+                return Err(Box::new(TypeCheckerError {
+                    msg: format!("Identifier {} does not correspond to a function!", name),
+                }));
             };
 
             if arg_types != *sig_arg_types {
-                panic!(
-                    "Function {} argument types {:?} don't match expected {:?}",
-                    name, arg_types, *sig_arg_types
-                );
+                return Err(Box::new(TypeCheckerError {
+                    msg: format!(
+                        "Function {} argument types {:?} don't match expected {:?}",
+                        name, arg_types, *sig_arg_types
+                    ),
+                }));
             }
 
-            (**sig_ret_type).clone()
+            Ok((**sig_ret_type).clone())
         }
         Block(ref mut expressions) => {
             symbols.push_level();
 
             let mut type_var = Type::Unit;
             for expression in expressions {
-                type_var = type_check(expression, symbols);
+                type_var = type_check(expression, symbols)?;
             }
 
             symbols.remove_level();
-            type_var
+            Ok(type_var)
         }
     }
 }
@@ -164,6 +208,7 @@ mod tests {
             &mut parse(&tokenize(code).unwrap()).unwrap(),
             &mut SymTab::new_type_table(),
         )
+        .unwrap()
     }
 
     #[test]
@@ -323,15 +368,19 @@ mod tests {
         let mut tokens = tokenize("foo(1)").unwrap();
         let mut ast = parse(&tokens).unwrap();
         let mut symtab = SymTab::new_type_table();
-        symtab.insert("foo", Func(vec![Int], Box::new(Int)));
-        let result = type_check(&mut ast, &mut symtab);
+        symtab
+            .insert("foo", Func(vec![Int], Box::new(Int)))
+            .unwrap();
+        let result = type_check(&mut ast, &mut symtab).unwrap();
         assert_eq!(result, Int);
 
         tokens = tokenize("foo(1);").unwrap();
         ast = parse(&tokens).unwrap();
         symtab = SymTab::new_type_table();
-        symtab.insert("foo", Func(vec![Int], Box::new(Int)));
-        let result = type_check(&mut ast, &mut symtab);
+        symtab
+            .insert("foo", Func(vec![Int], Box::new(Int)))
+            .unwrap();
+        let result = type_check(&mut ast, &mut symtab).unwrap();
         assert_eq!(result, Unit);
     }
 
@@ -341,8 +390,10 @@ mod tests {
         let tokens = tokenize("foo(true)").unwrap();
         let mut ast = parse(&tokens).unwrap();
         let mut symtab = SymTab::new_type_table();
-        symtab.insert("foo", Func(vec![Int], Box::new(Int)));
-        type_check(&mut ast, &mut symtab);
+        symtab
+            .insert("foo", Func(vec![Int], Box::new(Int)))
+            .unwrap();
+        type_check(&mut ast, &mut symtab).unwrap();
     }
 
     #[test]
@@ -352,7 +403,7 @@ mod tests {
         let mut symtab = SymTab::new_type_table();
 
         assert_eq!(ast.node_type, Unit);
-        type_check(&mut ast, &mut symtab);
+        type_check(&mut ast, &mut symtab).unwrap();
         assert_eq!(ast.node_type, Int);
     }
 }

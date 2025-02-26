@@ -20,7 +20,7 @@ pub fn generate_ir(ast: &AstNode) -> Vec<IrInstruction> {
     let global_types = IrVar::new_global_types();
     let mut types = global_types.clone();
     for var in global_types.keys() {
-        symbols.insert(&var.name, var.clone());
+        symbols.insert(&var.name, var.clone()).unwrap();
     }
 
     let result = visit_ast_node(
@@ -34,7 +34,7 @@ pub fn generate_ir(ast: &AstNode) -> Vec<IrInstruction> {
     match types.get(&result) {
         Some(Type::Int) => {
             let loc = instructions.last().unwrap().loc;
-            let fn_var = symbols.get("print_int").clone();
+            let fn_var = symbols.get("print_int").unwrap().clone();
             let result_var = add_var(&Type::Bool, &mut types);
 
             instructions.push(IrInstruction::new(
@@ -44,7 +44,7 @@ pub fn generate_ir(ast: &AstNode) -> Vec<IrInstruction> {
         }
         Some(Type::Bool) => {
             let loc = instructions.last().unwrap().loc;
-            let fn_var = symbols.get("print_bool").clone();
+            let fn_var = symbols.get("print_bool").unwrap().clone();
             let result_var = add_var(&Type::Bool, &mut types);
 
             instructions.push(IrInstruction::new(
@@ -121,9 +121,9 @@ fn visit_ast_node<'source>(
             });
             var
         }
-        Identifier(name) => symbols.get(name).clone(),
+        Identifier(name) => symbols.get(name).unwrap().clone(),
         UnaryOp(op, expr) => {
-            let op_var = symbols.get(&format!("unary_{op}")).clone();
+            let op_var = symbols.get(&format!("unary_{op}")).unwrap().clone();
             let expr_var = visit_ast_node(expr, types, symbols, instructions, labels);
             let result_var = add_var(&ast.node_type, types);
 
@@ -140,7 +140,7 @@ fn visit_ast_node<'source>(
                 let Identifier(var_name) = left.expr else {
                     panic!("Tried to assign to non-variable!");
                 };
-                let var = symbols.get(var_name).clone();
+                let var = symbols.get(var_name).unwrap().clone();
 
                 instructions.push(IrInstruction::new(right.loc, Copy(right_var, var.clone())));
 
@@ -215,7 +215,7 @@ fn visit_ast_node<'source>(
                 result_var
             }
             _ => {
-                let op_var = symbols.get(op).clone();
+                let op_var = symbols.get(op).unwrap().clone();
                 let left_var = visit_ast_node(left, types, symbols, instructions, labels);
                 let right_var = visit_ast_node(right, types, symbols, instructions, labels);
                 let result_var = add_var(&ast.node_type, types);
@@ -231,7 +231,7 @@ fn visit_ast_node<'source>(
         VarDeclaration(name, expr, _) => {
             let expr_var = visit_ast_node(expr, types, symbols, instructions, labels);
             let result_var = add_var(&expr.node_type, types);
-            symbols.insert(name, result_var.clone());
+            symbols.insert(name, result_var.clone()).unwrap();
             instructions.push(IrInstruction::new(expr.loc, Copy(expr_var, result_var)));
             add_var(&Type::Unit, types)
         }
@@ -307,7 +307,7 @@ fn visit_ast_node<'source>(
             add_var(&Type::Unit, types)
         }
         FunCall(name, expressions) => {
-            let fn_var = symbols.get(name).clone();
+            let fn_var = symbols.get(name).unwrap().clone();
             let Type::Func(_, result_type) = types.get(&fn_var).unwrap().clone() else {
                 panic!("Function call does not have entry in types table!");
             };

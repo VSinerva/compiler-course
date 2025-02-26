@@ -1,5 +1,18 @@
 use crate::compiler::variable::{Type, Value};
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error, fmt::Display};
+
+#[derive(Debug)]
+pub struct SymbolTableError {
+    msg: String,
+}
+
+impl Display for SymbolTableError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SymbolTableError: {}", self.msg)
+    }
+}
+
+impl Error for SymbolTableError {}
 
 #[derive(Default)]
 pub struct SymTab<'source, T> {
@@ -7,13 +20,15 @@ pub struct SymTab<'source, T> {
 }
 
 impl<'source, T> SymTab<'source, T> {
-    pub fn get(&mut self, symbol: &str) -> &mut T {
+    pub fn get(&mut self, symbol: &str) -> Result<&mut T, SymbolTableError> {
         for i in (0..self.tables.len()).rev() {
             if self.tables[i].contains_key(symbol) {
-                return self.tables[i].get_mut(symbol).unwrap();
+                return Ok(self.tables[i].get_mut(symbol).unwrap());
             }
         }
-        panic!("No symbol {} found!", symbol);
+        Err(SymbolTableError {
+            msg: format!("No symbol {} found!", symbol),
+        })
     }
 
     pub fn push_level(&mut self) {
@@ -24,7 +39,7 @@ impl<'source, T> SymTab<'source, T> {
         self.tables.pop();
     }
 
-    pub fn insert(&mut self, name: &'source str, val: T) {
+    pub fn insert(&mut self, name: &'source str, val: T) -> Result<(), SymbolTableError> {
         if self
             .tables
             .last_mut()
@@ -32,7 +47,11 @@ impl<'source, T> SymTab<'source, T> {
             .insert(name, val)
             .is_some()
         {
-            panic!("Variable {} already defined in this scope!", name)
+            Err(SymbolTableError {
+                msg: format!("Variable {} already defined in this scope!", name),
+            })
+        } else {
+            Ok(())
         }
     }
 }

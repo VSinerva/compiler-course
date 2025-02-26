@@ -26,7 +26,7 @@ mod variable;
 pub fn compile(code: &str) -> Result<String, Box<dyn Error>> {
     let tokens = tokenize(code)?;
     let mut ast = parse(&tokens)?;
-    type_check(&mut ast, &mut SymTab::new_type_table());
+    type_check(&mut ast, &mut SymTab::new_type_table())?;
     let ir = generate_ir(&ast);
     let assembly = generate_assembly(&ir);
 
@@ -38,10 +38,7 @@ pub fn start_compiler() {
     for line in lines.map_while(Result::ok) {
         match compile(&line) {
             Ok(_) => println!("\nCompilation OK :)\n"),
-            Err(e) => println!(
-                "{}",
-                format!("{{\"error\": {}}}", json::stringify(format!("{e}")))
-            ),
+            Err(e) => println!("\n{e}\n"),
         }
     }
 }
