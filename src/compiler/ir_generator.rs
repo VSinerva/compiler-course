@@ -333,9 +333,11 @@ fn visit_ast_node<'source>(
         }
         Block(expressions) => {
             let mut result_var = add_var(&Type::Unit, types);
+            symbols.push_level();
             for expression in expressions {
                 result_var = visit_ast_node(expression, types, symbols, instructions, labels);
             }
+            symbols.remove_level();
             result_var
         }
     }

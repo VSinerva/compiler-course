@@ -236,9 +236,9 @@ impl Locals {
     }
 
     pub fn get_ref(&self, var: &IrVar) -> &str {
-        self.var_to_location.get(var).expect(&format!(
-            "Tried to use non-existant var '{var}' in assembly generation!"
-        ))
+        self.var_to_location.get(var).unwrap_or_else(|| {
+            panic!("Tried to use non-existant var '{var}' in assembly generation!")
+        })
     }
 
     pub fn stack_used(&self) -> i64 {
