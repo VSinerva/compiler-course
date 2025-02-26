@@ -41,25 +41,20 @@ pub fn assemble(assembly: String) -> Vec<u8> {
     file.write_all(assembly.as_bytes())
         .expect("Can't write to temp file!");
 
-    let as_out1 = Command::new("as")
+    Command::new("as")
         .args(["-g", "-o", stdlib_obj, stdlib_asm])
         .output()
         .expect("Could not run 'as' command!");
 
-    let as_out2 = Command::new("as")
+    Command::new("as")
         .args(["-g", "-o", program_obj, program_asm])
         .output()
         .expect("Could not run 'as' command!");
 
-    let ld_out = Command::new("ld")
+    Command::new("ld")
         .args(["-o", output_file, "-static", stdlib_obj, program_obj])
         .output()
         .expect("Could not run 'as' command!");
-
-    println!("{as_out1:?}");
-    println!("{as_out2:?}");
-    println!("{ld_out:?}");
-    println!("{workdir:?}");
 
     let mut file = File::open(output_file).expect("Can't open compiler output!");
     let mut output = Vec::new();

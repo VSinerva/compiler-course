@@ -29,6 +29,7 @@ pub fn compile(code: &str) -> String {
     type_check(&mut ast, &mut SymTab::new_type_table());
     let ir = generate_ir(&ast);
     let assembly = generate_assembly(&ir);
+
     general_purpose::STANDARD.encode(&assemble(assembly))
 }
 
