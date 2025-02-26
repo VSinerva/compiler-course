@@ -1,6 +1,8 @@
 use std::io;
 
+use assembler::assemble;
 use assembly_generator::generate_assembly;
+use base64::{engine::general_purpose, Engine};
 use interpreter::interpret;
 use ir_generator::generate_ir;
 use parser::parse;
@@ -8,6 +10,7 @@ use symtab::SymTab;
 use tokenizer::tokenize;
 use type_checker::type_check;
 
+mod assembler;
 mod assembly_generator;
 mod ast;
 mod interpreter;
@@ -25,14 +28,15 @@ pub fn compile(code: &str) -> String {
     let mut ast = parse(&tokens);
     type_check(&mut ast, &mut SymTab::new_type_table());
     let ir = generate_ir(&ast);
-    generate_assembly(&ir)
+    let assembly = generate_assembly(&ir);
+    general_purpose::STANDARD.encode(&assemble(assembly))
 }
 
 pub fn start_compiler() {
     let lines = io::stdin().lines();
     for line in lines.map_while(Result::ok) {
         println!();
-        println!("{}", compile(&line));
+        println!("{:?}", compile(&line));
         println!();
     }
 }

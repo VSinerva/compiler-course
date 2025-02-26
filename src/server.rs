@@ -35,8 +35,13 @@ fn handle_connection(mut stream: TcpStream) {
         "ping" => println!("ping"),
         "compile" => {
             let program = json_request["code"].as_str().unwrap();
-            compiler::compile(program);
-            println!("compile code:\n\n{program}\n");
+            let output = compiler::compile(program);
+
+            let json_response = json::object! {
+                "program": output,
+            };
+            let response = json_response.as_str().unwrap().as_bytes();
+            stream.write_all(response).unwrap();
         }
         _ => panic!("Unexpected command!"),
     }

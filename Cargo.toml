@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+base64 = "0.22.1"
 json = "0.12.4"
 regex = "1.11.1"
+tempfile = "3.17.1"
