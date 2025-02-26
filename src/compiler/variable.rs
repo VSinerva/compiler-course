@@ -10,7 +10,7 @@ pub enum Type {
 
 #[derive(PartialEq, PartialOrd, Debug, Copy, Clone)]
 pub enum Value {
-    Int(i64),
+    Int(i128),
     Bool(bool),
     Func(fn(&[Value]) -> Value),
     None(),

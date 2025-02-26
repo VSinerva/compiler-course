@@ -40,7 +40,7 @@ impl<'source> fmt::Display for AstNode<'source> {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression<'source> {
     EmptyLiteral(),
-    IntLiteral(i64),
+    IntLiteral(i128),
     BoolLiteral(bool),
     Identifier(&'source str),
     UnaryOp(&'source str, Box<AstNode<'source>>),

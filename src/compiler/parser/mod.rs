@@ -275,7 +275,7 @@ fn parse_int_literal<'source>(pos: &mut usize, tokens: &[Token]) -> AstNode<'sou
     let expr = IntLiteral(
         token
             .text
-            .parse::<i64>()
+            .parse::<i128>()
             .unwrap_or_else(|_| panic!("Fatal parser error! Invalid value in token {token}")),
     );
 

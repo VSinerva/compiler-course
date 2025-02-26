@@ -109,7 +109,8 @@ fn visit_ast_node<'source>(
         EmptyLiteral() => add_var(&Type::Unit, types),
         IntLiteral(val) => {
             let var = add_var(&Type::Int, types);
-            instructions.push(IrInstruction::new(ast.loc, LoadIntConst(*val, var.clone())));
+            let val = *val as i64;
+            instructions.push(IrInstruction::new(ast.loc, LoadIntConst(val, var.clone())));
             var
         }
         BoolLiteral(val) => {
