@@ -29,7 +29,6 @@ impl IrVar {
     pub fn new_global_types() -> HashMap<IrVar, Type> {
         use Type::*;
         HashMap::from([
-            (IrVar::new("unit"), Unit),
             (IrVar::new("print_bool"), Func(vec![Bool], Box::new(Unit))),
             (IrVar::new("print_int"), Func(vec![Int], Box::new(Unit))),
             (IrVar::new("read_int"), Func(vec![], Box::new(Int))),

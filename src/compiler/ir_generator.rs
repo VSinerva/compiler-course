@@ -59,16 +59,25 @@ pub fn generate_ir(ast: &AstNode) -> Vec<IrInstruction> {
 }
 
 fn add_var(var_type: &Type, types: &mut HashMap<IrVar, Type>) -> IrVar {
-    let mut i = 1;
-    let mut var = IrVar::new(&format!("x{}", i));
+    match var_type {
+        Type::Unit => {
+            let var = IrVar::new("unit");
+            types.insert(var.clone(), var_type.clone());
+            var
+        }
+        _ => {
+            let mut i = 1;
+            let mut var = IrVar::new(&format!("x{}", i));
 
-    while types.contains_key(&var) {
-        i += 1;
-        var = IrVar::new(&format!("x{}", i));
+            while types.contains_key(&var) {
+                i += 1;
+                var = IrVar::new(&format!("x{}", i));
+            }
+
+            types.insert(var.clone(), var_type.clone());
+            var
+        }
     }
-
-    types.insert(var.clone(), var_type.clone());
-    var
 }
 
 fn add_label(
@@ -97,7 +106,7 @@ fn visit_ast_node<'source>(
     labels: &mut HashSet<IrInstructionType>,
 ) -> IrVar {
     match &ast.expr {
-        EmptyLiteral() => symbols.get("unit").clone(),
+        EmptyLiteral() => add_var(&Type::Unit, types),
         IntLiteral(val) => {
             let var = add_var(&Type::Int, types);
             instructions.push(IrInstruction::new(ast.loc, LoadIntConst(*val, var.clone())));
@@ -223,7 +232,7 @@ fn visit_ast_node<'source>(
             let result_var = add_var(&expr.node_type, types);
             symbols.insert(name, result_var.clone());
             instructions.push(IrInstruction::new(expr.loc, Copy(expr_var, result_var)));
-            symbols.get("unit").clone()
+            add_var(&Type::Unit, types)
         }
         Conditional(condition_expr, then_expr, else_expr) => match else_expr {
             Some(else_expr) => {
@@ -275,7 +284,7 @@ fn visit_ast_node<'source>(
                 visit_ast_node(then_expr, types, symbols, instructions, labels);
                 instructions.push(l_end);
 
-                symbols.get("unit").clone()
+                add_var(&Type::Unit, types)
             }
         },
         While(condition_expr, do_expr) => {
@@ -294,7 +303,7 @@ fn visit_ast_node<'source>(
             instructions.push(IrInstruction::new(do_expr.loc, Jump(Box::new(l_start))));
             instructions.push(l_end);
 
-            symbols.get("unit").clone()
+            add_var(&Type::Unit, types)
         }
         FunCall(name, expressions) => {
             let fn_var = symbols.get(name).clone();
@@ -322,7 +331,7 @@ fn visit_ast_node<'source>(
             result_var
         }
         Block(expressions) => {
-            let mut result_var = symbols.get("unit").clone();
+            let mut result_var = add_var(&Type::Unit, types);
             for expression in expressions {
                 result_var = visit_ast_node(expression, types, symbols, instructions, labels);
             }
