@@ -1,4 +1,4 @@
-use std::io;
+use std::{error::Error, io};
 
 use assembler::assemble;
 use assembly_generator::generate_assembly;
@@ -23,22 +23,23 @@ mod tokenizer;
 mod type_checker;
 mod variable;
 
-pub fn compile(code: &str) -> String {
-    let tokens = tokenize(code);
+pub fn compile(code: &str) -> Result<String, Box<dyn Error>> {
+    let tokens = tokenize(code)?;
     let mut ast = parse(&tokens);
     type_check(&mut ast, &mut SymTab::new_type_table());
     let ir = generate_ir(&ast);
     let assembly = generate_assembly(&ir);
 
-    general_purpose::STANDARD.encode(&assemble(assembly))
+    Ok(general_purpose::STANDARD.encode(assemble(assembly)))
 }
 
 pub fn start_compiler() {
     let lines = io::stdin().lines();
     for line in lines.map_while(Result::ok) {
-        println!();
-        println!("{:?}", compile(&line));
-        println!();
+        match compile(&line) {
+            Ok(_) => println!("\nCompilation OK :)\n"),
+            Err(e) => println!("\n{}\n", e),
+        }
     }
 }
 
@@ -47,7 +48,7 @@ pub fn start_interpreter() {
     #[allow(clippy::manual_flatten)]
     for line in lines {
         if let Ok(code) = line {
-            let tokens = tokenize(&code);
+            let tokens = tokenize(&code).unwrap();
             let ast = parse(&tokens);
 
             let val = interpret(&ast, &mut SymTab::new_val_table());

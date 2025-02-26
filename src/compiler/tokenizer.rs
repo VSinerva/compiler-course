@@ -1,7 +1,22 @@
+use std::{error::Error, fmt::Display};
+
 use crate::compiler::token::{CodeLocation, Token, TokenType};
 use regex::Regex;
 
-pub fn tokenize(code: &str) -> Vec<Token> {
+#[derive(Debug)]
+pub struct TokenizeError {
+    message: String,
+}
+
+impl Display for TokenizeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TokenizerError: {}", self.message)
+    }
+}
+
+impl Error for TokenizeError {}
+
+pub fn tokenize(code: &str) -> Result<Vec<Token>, TokenizeError> {
     // We only want to compile the regexes once
     // The ordering of these is important!
     let regexes = vec![
@@ -48,16 +63,19 @@ pub fn tokenize(code: &str) -> Vec<Token> {
             }
 
             if !valid_token {
-                panic!(
-                    "Invalid token on line {} in position {}",
-                    line_number + 1,
-                    pos + 1
-                );
+                return Err(TokenizeError {
+                    message: format!(
+                        "Invalid token starting with '{}' on line {} in position {}",
+                        &line[pos..pos + 1],
+                        line_number + 1,
+                        pos + 1
+                    ),
+                });
             }
         }
     }
 
-    tokens
+    Ok(tokens)
 }
 
 #[cfg(test)]
@@ -66,7 +84,7 @@ mod tests {
     #[test]
     fn test_tokenize_basic() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("if   3 \n\twhile");
+        let result = tokenize("if   3 \n\twhile").unwrap();
 
         use TokenType::*;
         assert_eq!(
@@ -81,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_tokenize_code_location() {
-        let result = tokenize("if 3\n  while");
+        let result = tokenize("if 3\n  while").unwrap();
 
         use TokenType::*;
         assert_eq!(
@@ -113,7 +131,7 @@ mod tests {
     #[test]
     fn test_tokenize_comment() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("if   3 \n\n//Comment\n#Another\n\twhile //Comment2");
+        let result = tokenize("if   3 \n\n//Comment\n#Another\n\twhile //Comment2").unwrap();
 
         use TokenType::*;
         assert_eq!(
@@ -129,7 +147,7 @@ mod tests {
     #[test]
     fn test_tokenize_operators_basic() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("var = 1 + 2");
+        let result = tokenize("var = 1 + 2").unwrap();
 
         use TokenType::*;
         assert_eq!(
@@ -147,7 +165,7 @@ mod tests {
     #[test]
     fn test_tokenize_operators_all() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("var 1 + - * 1/2 = == != < <= > >= 2 %");
+        let result = tokenize("var 1 + - * 1/2 = == != < <= > >= 2 %").unwrap();
 
         use TokenType::*;
         assert_eq!(
@@ -177,7 +195,7 @@ mod tests {
     #[test]
     fn test_tokenize_punctuation_basic() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("{var = (1 + 2, 3);:}");
+        let result = tokenize("{var = (1 + 2, 3);:}").unwrap();
 
         use TokenType::*;
         assert_eq!(
@@ -203,6 +221,6 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_tokenize_wrong_token() {
-        tokenize("if 3\n  while @");
+        tokenize("if 3\n  while @").unwrap();
     }
 }
