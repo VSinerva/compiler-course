@@ -4,19 +4,19 @@ use crate::compiler::token::{CodeLocation, Token, TokenType};
 use regex::Regex;
 
 #[derive(Debug)]
-pub struct TokenizeError {
-    message: String,
+pub struct TokenizerError {
+    msg: String,
 }
 
-impl Display for TokenizeError {
+impl Display for TokenizerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TokenizerError: {}", self.message)
+        write!(f, "TokenizerError: {}", self.msg)
     }
 }
 
-impl Error for TokenizeError {}
+impl Error for TokenizerError {}
 
-pub fn tokenize(code: &str) -> Result<Vec<Token>, TokenizeError> {
+pub fn tokenize(code: &str) -> Result<Vec<Token>, TokenizerError> {
     // We only want to compile the regexes once
     // The ordering of these is important!
     let regexes = vec![
@@ -63,8 +63,8 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, TokenizeError> {
             }
 
             if !valid_token {
-                return Err(TokenizeError {
-                    message: format!(
+                return Err(TokenizerError {
+                    msg: format!(
                         "Invalid token starting with '{}' on line {} in position {}",
                         &line[pos..pos + 1],
                         line_number + 1,

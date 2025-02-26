@@ -161,7 +161,7 @@ mod tests {
 
     fn get_type(code: &str) -> Type {
         type_check(
-            &mut parse(&tokenize(code).unwrap()),
+            &mut parse(&tokenize(code).unwrap()).unwrap(),
             &mut SymTab::new_type_table(),
         )
     }
@@ -321,14 +321,14 @@ mod tests {
     #[test]
     fn test_function() {
         let mut tokens = tokenize("foo(1)").unwrap();
-        let mut ast = parse(&tokens);
+        let mut ast = parse(&tokens).unwrap();
         let mut symtab = SymTab::new_type_table();
         symtab.insert("foo", Func(vec![Int], Box::new(Int)));
         let result = type_check(&mut ast, &mut symtab);
         assert_eq!(result, Int);
 
         tokens = tokenize("foo(1);").unwrap();
-        ast = parse(&tokens);
+        ast = parse(&tokens).unwrap();
         symtab = SymTab::new_type_table();
         symtab.insert("foo", Func(vec![Int], Box::new(Int)));
         let result = type_check(&mut ast, &mut symtab);
@@ -339,7 +339,7 @@ mod tests {
     #[should_panic]
     fn test_function_wrong_arg() {
         let tokens = tokenize("foo(true)").unwrap();
-        let mut ast = parse(&tokens);
+        let mut ast = parse(&tokens).unwrap();
         let mut symtab = SymTab::new_type_table();
         symtab.insert("foo", Func(vec![Int], Box::new(Int)));
         type_check(&mut ast, &mut symtab);
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     fn test_node_type() {
         let tokens = tokenize("1").unwrap();
-        let mut ast = parse(&tokens);
+        let mut ast = parse(&tokens).unwrap();
         let mut symtab = SymTab::new_type_table();
 
         assert_eq!(ast.node_type, Unit);

@@ -25,7 +25,7 @@ mod variable;
 
 pub fn compile(code: &str) -> Result<String, Box<dyn Error>> {
     let tokens = tokenize(code)?;
-    let mut ast = parse(&tokens);
+    let mut ast = parse(&tokens)?;
     type_check(&mut ast, &mut SymTab::new_type_table());
     let ir = generate_ir(&ast);
     let assembly = generate_assembly(&ir);
@@ -49,7 +49,7 @@ pub fn start_interpreter() {
     for line in lines {
         if let Ok(code) = line {
             let tokens = tokenize(&code).unwrap();
-            let ast = parse(&tokens);
+            let ast = parse(&tokens).unwrap();
 
             let val = interpret(&ast, &mut SymTab::new_val_table());
             println!("{}", val);
