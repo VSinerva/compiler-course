@@ -43,6 +43,7 @@ pub fn tokenize(code: &str) -> Vec<Token> {
 
                     valid_token = true;
                     pos += token.end();
+                    break;
                 }
             }
 
@@ -62,7 +63,6 @@ pub fn tokenize(code: &str) -> Vec<Token> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_tokenize_basic() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_tokenize_comment() {
         let loc = CodeLocation::new(usize::MAX, usize::MAX);
-        let result = tokenize("if   3 \n\n//Comment\n#Another\n\twhile");
+        let result = tokenize("if   3 \n\n//Comment\n#Another\n\twhile //Comment2");
 
         use TokenType::*;
         assert_eq!(
