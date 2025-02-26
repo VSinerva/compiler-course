@@ -15,7 +15,9 @@ target/
 result
 result-*
 
-
+# Test gadget
+test-gadget.py
+.test-gadget/
 
 # Added by cargo
 
