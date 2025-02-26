@@ -173,7 +173,9 @@ fn parse_term<'source>(
         TokenType::Punctuation => match token.text {
             "(" => parse_parenthesized(pos, tokens),
             "{" => parse_block(pos, tokens),
-            _ => unreachable!(),
+            _ => Err(ParserError {
+                msg: format!("Unexpected {}", token),
+            }),
         },
         _ => Err(ParserError {
             msg: format!("Unexpected {}", token),

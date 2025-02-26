@@ -38,7 +38,10 @@ pub fn start_compiler() {
     for line in lines.map_while(Result::ok) {
         match compile(&line) {
             Ok(_) => println!("\nCompilation OK :)\n"),
-            Err(e) => println!("\n{}\n", e),
+            Err(e) => println!(
+                "{}",
+                format!("{{\"error\": {}}}", json::stringify(format!("{e}")))
+            ),
         }
     }
 }

@@ -39,7 +39,7 @@ fn handle_connection(mut stream: TcpStream) {
 
             let response = match output {
                 Ok(output) => format!("{{\"program\": \"{output}\"}}"),
-                Err(e) => format!("{{\"error\": \"{e}\"}}"),
+                Err(e) => format!("{{\"error\": {}}}", json::stringify(format!("{e}"))),
             };
 
             stream.write_all(response.as_bytes()).unwrap();
